@@ -1,77 +1,208 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BelanjaBagus Affiliate OS</title><link rel="stylesheet" href="/styles.css"></head>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BelanjaBagus Affiliate OS</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
 <body>
 <main class="subpage">
-<header class="topbar"><a class="brand" href="/">DICIDY</a><div class="tagline">BELANJABAGUS AFFILIATE OS</div></header>
-<section class="subhero"><div class="kicker">SHOP / AFFILIATOR</div><h1>AFFILIATE OS.</h1><p>Central workspace for product radar, affiliate links, content production, publishing queue and performance analytics.</p></section>
-<section class="option-grid">
-<a class="option" href="/shop/affiliator/radar/"><h2>Product Radar</h2><p>Trending products, offers, commissions and selected opportunities.</p></a>
-<div class="option"><h2>Content Factory</h2><p>Scripts, captions, creative assets and AI video workflow.</p></div>
-<div class="option"><h2>Analytics</h2><p>Views → clicks → orders → products sold → commission.</p></div>
+<header class="topbar">
+  <a class="brand" href="/">DICIDY</a>
+  <div class="tagline">BELANJABAGUS AFFILIATE OS</div>
+</header>
+
+<section class="subhero">
+  <div class="kicker">SHOP / AFFILIATOR</div>
+  <h1>AFFILIATE OS.</h1>
+  <p>Central workspace for product radar, affiliate links, content production, publishing queue and performance analytics.</p>
 </section>
-<div class="member-access-strip"><div><div class="kicker">MEMBER ACCESS</div><strong>Login to enter Affiliate OS</strong><span>30-day free trial · approval required · package controlled</span></div><button class="auth-button" id="openLogin">LOGIN</button></div>
+
+<section class="option-grid">
+  <a class="option" id="radarCard" href="/shop/affiliator/radar/">
+    <h2>Product Radar</h2>
+    <p>Trending products, offers, commissions and selected opportunities.</p>
+    <span id="radarAccess" class="auth-status">CHECKING ACCESS...</span>
+  </a>
+  <div class="option"><h2>Content Factory</h2><p>Scripts, captions, creative assets and AI video workflow.</p><span class="auth-status">ACCESS CONTROLLED</span></div>
+  <div class="option"><h2>Analytics</h2><p>Views → clicks → orders → products sold → commission.</p><span class="auth-status">ACCESS CONTROLLED</span></div>
+</section>
+
+<section class="member-access-strip" id="accountPanel">
+  <div>
+    <div class="kicker">MEMBER ACCESS</div>
+    <strong id="accountTitle">Login to enter Affiliate OS</strong>
+    <span id="accountStatus">Email verification and administrator approval are required.</span>
+  </div>
+  <button class="auth-button" id="openLogin">LOGIN</button>
+</section>
+
 <a class="back" href="/shop/">← Back to Shop</a>
 </main>
 
 <div class="login-overlay" id="loginModal" aria-hidden="false">
-<div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-<button class="modal-close" id="closeLogin" aria-label="Close">×</button>
-<div class="kicker">DICIDY / MEMBER ACCESS</div><h2 id="loginTitle">Welcome back.</h2><p>Login to access your Affiliate OS workspace.</p>
-<form>
-<label>Email or Username<input type="text" placeholder="username or email"></label>
-<label>Password<input type="password" placeholder="Password"></label>
-<label class="remember-device"><input id="rememberDevice" type="checkbox"><span>Remember this device</span></label>
-<button class="auth-button login-submit" id="loginButton" type="button">LOGIN</button>
-</form>
-<div class="login-divider"><span>NEW MEMBER?</span></div>
-<a class="register-link" href="/shop/affiliator/auth/">REGISTER</a>
-<div class="session-note"><span id="sessionStatus">Session security: 72-hour maximum.</span></div>
-<div class="login-note">Email verification and administrator approval are required before protected tools can be opened. If a remembered session reaches 72 hours, access closes when you return to this tab and login is required again.</div>
+  <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="kicker">DICIDY / MEMBER ACCESS</div>
+    <h2 id="loginTitle">Welcome back.</h2>
+    <p id="loginDescription">Login with the email connected to your Affiliate OS account.</p>
+    <form id="loginForm">
+      <label>Email<input id="loginEmail" type="email" placeholder="name@example.com" autocomplete="email" required></label>
+      <label>Password<input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required></label>
+      <button class="auth-button login-submit" id="loginButton" type="submit">LOGIN</button>
+    </form>
+    <div class="login-divider"><span>NEW MEMBER?</span></div>
+    <a class="register-link" href="/shop/affiliator/auth/">REGISTER</a>
+    <div class="session-note"><span id="loginStatus">Firebase Authentication · secure session.</span></div>
+  </div>
 </div>
-</div>
-<script>
-const modal=document.getElementById('loginModal');
-document.getElementById('openLogin').addEventListener('click',()=>modal.classList.add('hidden'));
-document.getElementById('closeLogin').addEventListener('click',()=>modal.classList.add('hidden'));
 
-const SESSION_KEY='dicidy_affiliate_session_started_at';
-const REMEMBER_KEY='dicidy_affiliate_remember_device';
-const SESSION_LIMIT=72*60*60*1000;
-const remember=document.getElementById('rememberDevice');
-const loginButton=document.getElementById('loginButton');
-const status=document.getElementById('sessionStatus');
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  reload
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-function sessionExpired(){
-  const started=Number(localStorage.getItem(SESSION_KEY)||0);
-  return !started || (Date.now()-started)>=SESSION_LIMIT;
+const modal = document.getElementById("loginModal");
+const openLogin = document.getElementById("openLogin");
+const loginForm = document.getElementById("loginForm");
+const loginButton = document.getElementById("loginButton");
+const loginStatus = document.getElementById("loginStatus");
+const accountTitle = document.getElementById("accountTitle");
+const accountStatus = document.getElementById("accountStatus");
+const radarCard = document.getElementById("radarCard");
+const radarAccess = document.getElementById("radarAccess");
+
+function showModal() {
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
 }
-function clearSession(){
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(REMEMBER_KEY);
-  remember.checked=false;
-  status.textContent='Session expired. Please login again.';
-  modal.classList.remove('hidden');
+
+function hideModal() {
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
 }
-function restoreRememberedSession(){
-  if(localStorage.getItem(REMEMBER_KEY)==='true' && !sessionExpired()){
-    modal.classList.add('hidden');
-    status.textContent='Remembered device · session expires within 72 hours.';
-  }else if(localStorage.getItem(REMEMBER_KEY)==='true' && sessionExpired()){
-    clearSession();
+
+function setRadarLocked(label) {
+  radarAccess.textContent = label;
+  radarCard.classList.add("locked");
+}
+
+function setRadarOpen() {
+  radarAccess.textContent = "OPEN · PRODUCT RADAR";
+  radarCard.classList.remove("locked");
+}
+
+function friendlyError(error) {
+  const map = {
+    "auth/invalid-credential": "Email atau password salah.",
+    "auth/invalid-email": "Format email tidak valid.",
+    "auth/user-disabled": "Akun ini dinonaktifkan.",
+    "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi beberapa saat.",
+    "auth/network-request-failed": "Koneksi bermasalah. Coba lagi."
+  };
+  return map[error?.code] || error?.message || "Login gagal.";
+}
+
+async function loadAccount(user) {
+  await reload(user);
+
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    accountTitle.textContent = "Profile not found";
+    accountStatus.textContent = "Your authentication account has no Affiliate OS profile yet.";
+    setRadarLocked("PROFILE NOT FOUND");
+    return;
   }
+
+  const data = snap.data();
+  const authVerified = user.emailVerified === true;
+
+  if (data.emailVerified !== authVerified) {
+    await updateDoc(ref, {
+      emailVerified: authVerified,
+      updatedAt: serverTimestamp()
+    });
+    data.emailVerified = authVerified;
+  }
+
+  accountTitle.textContent = data.fullName || user.email;
+
+  if (!authVerified) {
+    accountStatus.textContent = "EMAIL NOT VERIFIED · Please verify your email before approval.";
+    setRadarLocked("EMAIL VERIFICATION REQUIRED");
+    return;
+  }
+
+  if (data.approvalStatus !== "APPROVED") {
+    accountStatus.textContent = "EMAIL VERIFIED · MEMBERSHIP PENDING ADMIN APPROVAL.";
+    setRadarLocked("PENDING ADMIN APPROVAL");
+    return;
+  }
+
+  accountStatus.textContent = "APPROVED · " + (data.package || "ACCESS CONTROLLED");
+  setRadarOpen();
 }
-loginButton.addEventListener('click',()=>{
-  localStorage.setItem(SESSION_KEY,String(Date.now()));
-  localStorage.setItem(REMEMBER_KEY,remember.checked?'true':'false');
-  status.textContent=remember.checked?'Remembered device · session expires within 72 hours.':'Session active · login required again after session ends.';
-  modal.classList.add('hidden');
-});
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && localStorage.getItem(REMEMBER_KEY)==='true' && sessionExpired()){
-    clearSession();
+
+openLogin.addEventListener("click", showModal);
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  loginButton.disabled = true;
+  loginButton.textContent = "LOGIN...";
+  loginStatus.textContent = "Authenticating...";
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      document.getElementById("loginEmail").value.trim().toLowerCase(),
+      document.getElementById("loginPassword").value
+    );
+    hideModal();
+  } catch (error) {
+    loginStatus.textContent = friendlyError(error);
+  } finally {
+    loginButton.disabled = false;
+    loginButton.textContent = "LOGIN";
   }
 });
-restoreRememberedSession();
+
+radarCard.addEventListener("click", (event) => {
+  if (radarCard.classList.contains("locked")) {
+    event.preventDefault();
+    if (!auth.currentUser) showModal();
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    accountTitle.textContent = "Login to enter Affiliate OS";
+    accountStatus.textContent = "Email verification and administrator approval are required.";
+    openLogin.textContent = "LOGIN";
+    setRadarLocked("LOGIN REQUIRED");
+    showModal();
+    return;
+  }
+
+  try {
+    await loadAccount(user);
+    openLogin.textContent = "ACCOUNT ACTIVE";
+  } catch (error) {
+    accountStatus.textContent = error?.message || "Unable to load your membership status.";
+    setRadarLocked("ACCESS CHECK FAILED");
+  }
+});
 </script>
-</body></html>
+</body>
+</html>
