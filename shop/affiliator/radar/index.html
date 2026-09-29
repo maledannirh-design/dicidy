@@ -40,6 +40,11 @@
 .radar-btn:hover{border-color:rgba(255,255,255,.5);background:#161616}
 .radar-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#777;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
 .radar-footer a:hover{color:#eee}
+.access-gate{border:1px solid var(--line);padding:34px;background:#0d0d0d;margin-top:24px}
+.access-gate h2{font-family:Georgia,serif;font-weight:400;font-size:32px;margin:8px 0 12px}
+.access-gate p{color:#999;line-height:1.7;max-width:620px}
+.access-gate .gate-status{display:inline-block;margin-top:18px;border:1px solid var(--line);padding:10px 14px;color:#ddd;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.radar-content{display:none}
 @media(max-width:1000px){
 .radar-table-head{display:none}
 .radar-row{grid-template-columns:34px 1fr 90px;padding:16px}
@@ -76,6 +81,14 @@
 <p>Find products worth creating content for. Start with the strongest opportunities, then move selected products into the content queue.</p>
 </section>
 
+<section id="accessGate" class="access-gate">
+<div class="kicker">ACCESS CONTROL</div>
+<h2 id="gateTitle">Checking your access.</h2>
+<p id="gateMessage">Firebase Authentication and Affiliate OS permissions are being verified.</p>
+<span id="gateStatus" class="gate-status">CHECKING</span>
+</section>
+
+<section id="radarContent" class="radar-content">
 <input class="radar-search" type="search" placeholder="Search product, shop, category..." aria-label="Search products">
 
 <div class="radar-filters">
@@ -142,6 +155,108 @@
 <span>V1 · SAMPLE DATA</span>
 <a href="/shop/">Shop</a>
 </div>
+</section>
 </main>
+
+<script type="module">
+import { auth, db } from "../firebase-config.js";
+import {
+  onAuthStateChanged,
+  reload
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const gate = document.getElementById("accessGate");
+const gateTitle = document.getElementById("gateTitle");
+const gateMessage = document.getElementById("gateMessage");
+const gateStatus = document.getElementById("gateStatus");
+const content = document.getElementById("radarContent");
+
+function deny(title, message, status) {
+  gateTitle.textContent = title;
+  gateMessage.textContent = message;
+  gateStatus.textContent = status;
+  gate.style.display = "block";
+  content.style.display = "none";
+}
+
+function allow() {
+  gate.style.display = "none";
+  content.style.display = "block";
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    deny(
+      "Login required.",
+      "Please login through Affiliate OS before opening Product Radar.",
+      "LOGIN REQUIRED"
+    );
+    return;
+  }
+
+  try {
+    await reload(user);
+
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (!userSnap.exists()) {
+      deny("Profile not found.", "Your authentication account has no Affiliate OS profile.", "PROFILE NOT FOUND");
+      return;
+    }
+
+    const profile = userSnap.data();
+    const authVerified = user.emailVerified === true;
+
+    if (profile.emailVerified !== authVerified) {
+      await updateDoc(doc(db, "users", user.uid), {
+        emailVerified: authVerified,
+        updatedAt: serverTimestamp()
+      });
+      profile.emailVerified = authVerified;
+    }
+
+    if (!authVerified) {
+      deny(
+        "Verify your email first.",
+        "Your Firebase email verification is not complete yet. Verify the email address, then return and login again.",
+        "EMAIL VERIFICATION REQUIRED"
+      );
+      return;
+    }
+
+    if (profile.approvalStatus !== "APPROVED") {
+      deny(
+        "Your membership is pending approval.",
+        "Your email is verified, but an administrator has not approved your Affiliate OS membership yet.",
+        "PENDING ADMIN APPROVAL"
+      );
+      return;
+    }
+
+    const permissionSnap = await getDoc(doc(db, "userPermissions", user.uid));
+    if (!permissionSnap.exists() || permissionSnap.data().productRadar !== true) {
+      deny(
+        "Product Radar is locked.",
+        "Your account is approved, but Product Radar has not been enabled for your current package or permissions.",
+        "PRODUCT RADAR LOCKED"
+      );
+      return;
+    }
+
+    allow();
+  } catch (error) {
+    deny(
+      "Access check failed.",
+      error?.message || "Unable to verify your Affiliate OS access.",
+      "CHECK FAILED"
+    );
+  }
+});
+</script>
 </body>
 </html>
