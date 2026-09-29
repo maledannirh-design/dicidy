@@ -392,155 +392,53 @@ async function prepareFlowImage(flowTab, product) {
 
 async function testFlowDirectInput() {
   const targets = await findTargets();
-  if (!targets.flow) {
-    throw new Error("Google Flow tab not found. Tabs: " + JSON.stringify(targets.flowCandidates.map(t => ({id:t.id,title:t.title,url:t.url}))));
-  }
+  if (!targets.flow) throw new Error("Google Flow tab not found.");
 
   const flowTab = targets.flow;
-  await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
+  await chrome.debugger.attach({tabId:flowTab.id},"1.3");
   try {
-    const probe = await evaluate(flowTab.id, `(() => {
-      const visible = el => {
-        const r = el.getBoundingClientRect();
-        const s = getComputedStyle(el);
-        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden";
-      };
-      const all = Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]'));
-      return {
-        url: location.href,
-        title: document.title,
-        slate: all.filter(e => e.matches('[data-slate-editor="true"]')).filter(visible).length,
-        contenteditable: all.filter(e => e.matches('[contenteditable="true"]')).filter(visible).length,
-        textarea: all.filter(e => e.matches('textarea')).filter(visible).length,
-        inputs: all.filter(e => e.matches('input[type="text"]')).filter(visible).length,
-        elements: all.filter(visible).slice(-10).map(e => ({
-          tag:e.tagName,
-          slate:e.matches('[data-slate-editor="true"]'),
-          text:(e.innerText||e.textContent||e.value||"").slice(0,120),
-          placeholder:e.getAttribute("data-placeholder")||e.getAttribute("placeholder")||"",
-          aria:e.getAttribute("aria-label")||""
-        }))
-      };
+    const scene = await evaluate(flowTab.id,`(() => {
+      const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled;};
+      const nodes=Array.from(document.querySelectorAll('button,[role="button"],a')).filter(visible);
+      const el=nodes.find(n=>/^Scenes$/i.test([n.innerText||"",n.getAttribute("aria-label")||"",n.getAttribute("title")||""].join(" ").trim()));
+      if(!el)return {found:false};
+      const r=el.getBoundingClientRect();return {found:true,x:r.left+r.width/2,y:r.top+r.height/2};
     })()`);
-
-    // Force the generation surface to VIDEO before focusing the prompt.
-    // Flow's current composer exposes this through generation settings.
-    const videoMode = await evaluate(flowTab.id, `(() => {
-      const visible = el => {
-        const r = el.getBoundingClientRect();
-        const s = getComputedStyle(el);
-        return r.width > 0 && r.height > 0 &&
-          s.display !== "none" && s.visibility !== "hidden" &&
-          el.getAttribute("aria-disabled") !== "true" && !el.disabled;
-      };
-      const label = el => [
-        el.innerText || "",
-        el.getAttribute("aria-label") || "",
-        el.getAttribute("title") || "",
-        el.getAttribute("data-testid") || ""
-      ].join(" ").trim();
-
-      const all = Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"]')).filter(visible);
-
-      // If a visible exact "Video" choice is already present, select it.
-      let video = all.find(el => /^Video$/i.test((el.innerText || "").trim()));
-      if (video) {
-        const r = video.getBoundingClientRect();
-        return {action:"click-video",x:r.left+r.width/2,y:r.top+r.height/2,label:label(video)};
-      }
-
-      // Otherwise open generation settings (the sliders/tune control near the composer).
-      const settings = all.find(el => /generation settings|settings|tune|sliders/i.test(label(el)));
-      if (!settings) return {action:"none",reason:"Video option/settings control not visible yet."};
-
-      const r = settings.getBoundingClientRect();
-      return {action:"open-settings",x:r.left+r.width/2,y:r.top+r.height/2,label:label(settings)};
-    })()`);
-
-    if (videoMode && videoMode.action !== "none") {
-      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-        type:"mouseMoved", x:videoMode.x, y:videoMode.y
-      });
-      await new Promise(resolve => setTimeout(resolve, 75));
-      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-        type:"mousePressed", x:videoMode.x, y:videoMode.y,
-        button:"left", clickCount:1
-      });
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-        type:"mouseReleased", x:videoMode.x, y:videoMode.y,
-        button:"left", clickCount:1
-      });
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // If settings was opened, now explicitly select Video.
-      if (videoMode.action === "open-settings") {
-        const videoChoice = await evaluate(flowTab.id, `(() => {
-          const visible = el => {
-            const r=el.getBoundingClientRect();
-            const s=getComputedStyle(el);
-            return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled;
-          };
-          const nodes=Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"]')).filter(visible);
-          const el=nodes.find(n => /^Video$/i.test((n.innerText||"").trim()));
-          if(!el) return null;
-          const r=el.getBoundingClientRect();
-          return {x:r.left+r.width/2,y:r.top+r.height/2,label:el.innerText||""};
-        })()`);
-        if (videoChoice) {
-          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-            type:"mouseMoved", x:videoChoice.x, y:videoChoice.y
-          });
-          await new Promise(resolve => setTimeout(resolve, 75));
-          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-            type:"mousePressed", x:videoChoice.x, y:videoChoice.y,
-            button:"left", clickCount:1
-          });
-          await new Promise(resolve => setTimeout(resolve, 50));
-          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-            type:"mouseReleased", x:videoChoice.x, y:videoChoice.y,
-            button:"left", clickCount:1
-          });
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+    if(scene?.found){
+      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:scene.x,y:scene.y});
+      await new Promise(r=>setTimeout(r,75));
+      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:scene.x,y:scene.y,button:"left",clickCount:1});
+      await new Promise(r=>setTimeout(r,50));
+      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:scene.x,y:scene.y,button:"left",clickCount:1});
+      await new Promise(r=>setTimeout(r,700));
     }
 
-    const input = await evaluate(flowTab.id, `(() => {
-      const visible = el => {
-        const r = el.getBoundingClientRect();
-        const s = getComputedStyle(el);
-        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden" && !el.disabled;
-      };
-      const candidates = [
-        ...Array.from(document.querySelectorAll('[data-slate-editor="true"]')).filter(visible),
-        ...Array.from(document.querySelectorAll('[contenteditable="true"]')).filter(visible),
-        ...Array.from(document.querySelectorAll('textarea')).filter(visible),
-        ...Array.from(document.querySelectorAll('input[type="text"]')).filter(visible)
-      ];
-      const el = candidates[candidates.length-1];
-      if (!el) return null;
-      el.scrollIntoView({block:"center",inline:"center"});
-      const r=el.getBoundingClientRect();
-      return {x:r.left+Math.min(r.width/2,300),y:r.top+Math.min(r.height/2,40),tag:el.tagName,slate:el.matches('[data-slate-editor="true"]')};
+    const probe=await evaluate(flowTab.id,`(() => {
+      const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";};
+      const all=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]')).filter(visible);
+      const ed=all[all.length-1];
+      if(!ed)return {ok:false,reason:"No visible Flow editor after Scenes click",elements:all.length};
+      const r=ed.getBoundingClientRect();
+      return {ok:true,tag:ed.tagName,slate:ed.matches('[data-slate-editor="true"]'),x:r.left+Math.min(r.width/2,300),y:r.top+Math.min(r.height/2,40),placeholder:ed.getAttribute("data-placeholder")||ed.getAttribute("placeholder")||""};
     })()`);
+    if(!probe?.ok) return {ok:false,scene,probe};
 
-    if (!input) return {ok:false,reason:"No visible Flow editor",probe};
-
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:input.x,y:input.y});
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:input.x,y:input.y,button:"left",clickCount:1});
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:input.x,y:input.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,300));
-
-    const text="DICIDY FLOW DIRECT TEST — PLEASE SHOW THIS TEXT";
+    const text="DICIDY DIRECT FLOW TEST — THIS TEXT MUST APPEAR";
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:probe.x,y:probe.y});
+    await new Promise(r=>setTimeout(r,100));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:probe.x,y:probe.y,button:"left",clickCount:1});
+    await new Promise(r=>setTimeout(r,50));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:probe.x,y:probe.y,button:"left",clickCount:1});
+    await new Promise(r=>setTimeout(r,250));
     await sendCommand(flowTab.id,"Input.insertText",{text});
     await new Promise(r=>setTimeout(r,500));
 
     const verify=await evaluate(flowTab.id,`(() => {
       const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]'));
-      return nodes.filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0}).map(e=>({tag:e.tagName,text:(e.innerText||e.textContent||e.value||"").slice(0,300)}));
+      const visible=nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});
+      return {found:visible.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:visible.slice(-6).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||""}))};
     })()`);
-    return {ok:true,input,probe,text,verify,found:JSON.stringify(verify).includes(text)};
+    return {ok:Boolean(verify?.found),scene,probe,verify};
   } finally {
     await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
   }
