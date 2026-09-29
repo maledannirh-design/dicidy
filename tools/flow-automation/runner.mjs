@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 const ROOT = path.resolve(process.cwd());
 const JOB_FILE = path.join(ROOT, "job.json");
 const PROFILE = path.join(ROOT, "profiles", "dicidy-flow");
+const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
 
 function log(message) {
   console.log(`[DICIDY FLOW] ${new Date().toLocaleTimeString()} ${message}`);
@@ -36,12 +37,74 @@ await chat.goto("https://chatgpt.com/", { waitUntil: "domcontentloaded" });
 await flow.goto("https://flow.google/", { waitUntil: "domcontentloaded" });
 
 console.log("\nDICIDY Flow POC");
-console.log("If either site asks for login, complete it manually in the opened Chrome window.");
+console.log("IMPORTANT: The runner will NOT type anything until login/access is detected.");
+console.log("Complete any required login manually in the opened Chrome window.");
 console.log("The automation will not receive or store your password.\n");
 
-async function waitForUserReady() {
-  await chat.waitForTimeout(2500);
-  await flow.waitForTimeout(2500);
+async function pageLooksLoggedIn(page, kind) {
+  if (kind === "chat") {
+    const loginButton = page.getByRole("button", { name: /^Log in$/i });
+    const signupButton = page.getByRole("button", { name: /Sign up for free/i });
+    const textareas = page.locator("textarea");
+    const editables = page.locator('[contenteditable="true"]');
+
+    return (await textareas.count()) > 0 ||
+      (await editables.count()) > 0 ||
+      ((await loginButton.count()) === 0 && (await signupButton.count()) === 0);
+  }
+
+  const url = page.url();
+  if (/accounts\.google\.com/i.test(url)) return false;
+
+  const bodyText = ((await page.locator("body").innerText().catch(() => "")) || "").trim();
+  if (/couldn.?t sign you in|this browser or app may not be secure/i.test(bodyText)) {
+    return false;
+  }
+
+  const candidates = [
+    page.locator("textarea").last(),
+    page.locator('[contenteditable="true"]').last()
+  ];
+
+  for (const candidate of candidates) {
+    if (await candidate.count()) return true;
+  }
+
+  return true;
+}
+
+async function waitForAccess() {
+  log("Checking ChatGPT login...");
+  const started = Date.now();
+
+  while (Date.now() - started < LOGIN_TIMEOUT_MS) {
+    if (await pageLooksLoggedIn(chat, "chat")) {
+      log("ChatGPT access detected.");
+      break;
+    }
+
+    log("ChatGPT is not ready. Please log in manually in the opened Chrome window.");
+    await chat.waitForTimeout(3000);
+  }
+
+  if (!(await pageLooksLoggedIn(chat, "chat"))) {
+    throw new Error("ChatGPT login/access was not detected within 10 minutes.");
+  }
+
+  log("Checking Google Flow access...");
+  const flowStarted = Date.now();
+
+  while (Date.now() - flowStarted < LOGIN_TIMEOUT_MS) {
+    if (await pageLooksLoggedIn(flow, "flow")) {
+      log("Google Flow page is accessible.");
+      return;
+    }
+
+    log("Google Flow is not ready. Complete any required account/access step manually.");
+    await flow.waitForTimeout(3000);
+  }
+
+  throw new Error("Google Flow access was not detected within 10 minutes.");
 }
 
 async function sendToChatGPT(prompt) {
@@ -68,6 +131,7 @@ ${prompt}`;
 
   await chat.waitForTimeout(1500);
   const started = Date.now();
+
   while (Date.now() - started < 120000) {
     const messages = chat.locator('[data-message-author-role="assistant"]');
     if (await messages.count()) {
@@ -76,6 +140,7 @@ ${prompt}`;
     }
     await chat.waitForTimeout(1500);
   }
+
   throw new Error("Timed out waiting for a ChatGPT response.");
 }
 
@@ -95,41 +160,37 @@ async function prepareFlowPrompt(prompt) {
   return false;
 }
 
-await waitForUserReady();
+await waitForAccess();
 
-for (let i = 0; i < job.jobs.length; i++) {
-  const item = job.jobs[i];
-  log(`JOB ${i + 1}/${job.jobs.length}: ${item.angle}`);
+// POC safety mode: process ONE job only until the live ChatGPT + Flow handoff
+// has been verified. The remaining jobs stay untouched in job.json.
+const item = job.jobs[0];
+log(`POC JOB 1/1: ${item.angle}`);
 
-  try {
-    log("Compiling Flow prompt in ChatGPT...");
-    const compiledPrompt = await sendToChatGPT(item.prompt);
+try {
+  log("Compiling Flow prompt in ChatGPT...");
+  const compiledPrompt = await sendToChatGPT(item.prompt);
 
-    log("Prompt received.");
-    console.log("\n--- FLOW PROMPT ---\n" + compiledPrompt + "\n--- END PROMPT ---\n");
+  log("Prompt received.");
+  console.log("\n--- FLOW PROMPT ---\n" + compiledPrompt + "\n--- END PROMPT ---\n");
 
-    const placed = await prepareFlowPrompt(compiledPrompt);
+  const placed = await prepareFlowPrompt(compiledPrompt);
 
-    if (!placed) {
-      log("Flow prompt input was not identified. POC paused for selector verification.");
-      console.log("Paste the displayed prompt into Flow manually, then press Enter here to continue.");
-      await new Promise(resolve => process.stdin.once("data", resolve));
-    } else {
-      log("Prompt placed in Google Flow.");
-      console.log("POC intentionally stops before clicking Generate until the live Flow UI selector is verified.");
-      console.log("Press Enter after you inspect the prompt in Flow.");
-      await new Promise(resolve => process.stdin.once("data", resolve));
-    }
-
+  if (!placed) {
+    item.status = "FLOW_PROMPT_READY_MANUAL";
+    item.compiledPrompt = compiledPrompt;
+    log("Flow prompt input was not identified. POC stopped for live selector verification.");
+  } else {
     item.status = "FLOW_PROMPT_READY";
     item.compiledPrompt = compiledPrompt;
-  } catch (error) {
-    item.status = "ERROR";
-    item.error = error.message;
-    log(`ERROR: ${error.message}`);
-    console.log("Press Enter to continue to the next job.");
-    await new Promise(resolve => process.stdin.once("data", resolve));
+    log("Prompt placed in Google Flow.");
   }
+
+  console.log("\nPOC STOP: no Generate click. Inspect the Flow page manually.");
+} catch (error) {
+  item.status = "ERROR";
+  item.error = error.message;
+  log(`ERROR: ${error.message}`);
 }
 
 fs.writeFileSync(
@@ -138,5 +199,5 @@ fs.writeFileSync(
   "utf8"
 );
 
-log("Queue finished. Result saved to job-result.json.");
-await context.close();
+log("POC finished. Result saved to job-result.json.");
+console.log("You can close the automation browser when you are finished inspecting it.");
