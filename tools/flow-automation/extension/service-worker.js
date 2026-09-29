@@ -46,23 +46,24 @@ async function inspectTab(tab, role) {
 
 async function findTargets() {
   const tabs = await chrome.tabs.query({});
+
   const chat = tabs.find(tab =>
     typeof tab.title === "string" &&
     tab.title.toUpperCase().includes(CHAT_TITLE)
   );
-  const flow = tabs.find(tab =>
-    typeof tab.url === "string" &&
-    (
-      /^https?:\/\/flow\.google\.com\/?/i.test(tab.url) ||
-      /^https?:\/\/labs\.google\.com\/fx\/tools\/flow/i.test(tab.url)
-    )
-  );
 
-  return { tabs, chat, flow };
+  const flowCandidates = tabs.filter(tab => {
+    const value = String(tab.url || tab.pendingUrl || "");
+    return /flow\.google\.com/i.test(value) || /labs\.google\.com.*flow/i.test(value);
+  });
+
+  const flow = flowCandidates[0] || null;
+
+  return { tabs, chat, flow, flowCandidates };
 }
 
 async function runDiagnostic() {
-  const { tabs, chat, flow } = await findTargets();
+  const { tabs, chat, flow, flowCandidates } = await findTargets();
 
   const result = {
     ok: false,
@@ -70,6 +71,12 @@ async function runDiagnostic() {
     browserTabCount: tabs.length,
     chat: null,
     flow: null,
+    flowCandidates: flowCandidates.map(tab => ({
+      id: tab.id,
+      title: tab.title || "",
+      url: tab.url || "",
+      pendingUrl: tab.pendingUrl || ""
+    })),
     errors: []
   };
 
