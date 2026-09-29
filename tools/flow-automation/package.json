@@ -5,7 +5,8 @@
   "description": "Local Playwright proof-of-concept for DICIDY Content Factory.",
   "type": "module",
   "scripts": {
-    "start": "node runner.mjs"
+    "start": "node runner.mjs",
+    "bridge": "node bridge-server.mjs"
   },
   "dependencies": {
     "playwright": "^1.58.0"
