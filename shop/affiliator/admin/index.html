@@ -126,11 +126,11 @@ import {onAuthStateChanged,signInWithEmailAndPassword,signOut,setPersistence,bro
 import {collection,getDocs,doc,getDoc,updateDoc,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const PACKAGE_DEFAULTS={
-BASIC:{productRadar:true,contentFactory:true,affiliateTools:false,advancedAnalytics:false,adminTools:false},
-PRO:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:false,adminTools:false},
-PRO_COUNSELLING:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:false,adminTools:false},
-DIAMOND:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:true,adminTools:false}};
-const FEATURES={productRadar:"Product Radar",contentFactory:"Content Factory",affiliateTools:"Affiliate Tools",advancedAnalytics:"Advanced Analytics",adminTools:"Admin Tools"};
+BASIC:{productRadar:true,contentFactory:true,affiliateTools:false,advancedAnalytics:false,promptEditor:false,adminTools:false},
+PRO:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:false,promptEditor:false,adminTools:false},
+PRO_COUNSELLING:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:false,promptEditor:false,adminTools:false},
+DIAMOND:{productRadar:true,contentFactory:true,affiliateTools:true,advancedAnalytics:true,promptEditor:true,adminTools:false}};
+const FEATURES={productRadar:"Product Radar",contentFactory:"Content Factory",affiliateTools:"Affiliate Tools",advancedAnalytics:"Advanced Analytics",promptEditor:"Prompt Editor — Diamond",adminTools:"Admin Tools"};
 const state={users:[],permissions:new Map(),selectedUid:null};
 
 const $=id=>document.getElementById(id);
