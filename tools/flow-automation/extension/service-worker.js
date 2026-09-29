@@ -444,6 +444,79 @@ async function prepareFlowImage(flowTab, product) {
   }
 }
 
+async function testFlowDirectInput() {
+  const targets = await findTargets();
+  if (!targets.flow) {
+    throw new Error("Google Flow tab not found. Tabs: " + JSON.stringify(targets.flowCandidates.map(t => ({id:t.id,title:t.title,url:t.url}))));
+  }
+
+  const flowTab = targets.flow;
+  await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
+  try {
+    const probe = await evaluate(flowTab.id, `(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden";
+      };
+      const all = Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]'));
+      return {
+        url: location.href,
+        title: document.title,
+        slate: all.filter(e => e.matches('[data-slate-editor="true"]')).filter(visible).length,
+        contenteditable: all.filter(e => e.matches('[contenteditable="true"]')).filter(visible).length,
+        textarea: all.filter(e => e.matches('textarea')).filter(visible).length,
+        inputs: all.filter(e => e.matches('input[type="text"]')).filter(visible).length,
+        elements: all.filter(visible).slice(-10).map(e => ({
+          tag:e.tagName,
+          slate:e.matches('[data-slate-editor="true"]'),
+          text:(e.innerText||e.textContent||e.value||"").slice(0,120),
+          placeholder:e.getAttribute("data-placeholder")||e.getAttribute("placeholder")||"",
+          aria:e.getAttribute("aria-label")||""
+        }))
+      };
+    })()`);
+
+    const input = await evaluate(flowTab.id, `(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden" && !el.disabled;
+      };
+      const candidates = [
+        ...Array.from(document.querySelectorAll('[data-slate-editor="true"]')).filter(visible),
+        ...Array.from(document.querySelectorAll('[contenteditable="true"]')).filter(visible),
+        ...Array.from(document.querySelectorAll('textarea')).filter(visible),
+        ...Array.from(document.querySelectorAll('input[type="text"]')).filter(visible)
+      ];
+      const el = candidates[candidates.length-1];
+      if (!el) return null;
+      el.scrollIntoView({block:"center",inline:"center"});
+      const r=el.getBoundingClientRect();
+      return {x:r.left+Math.min(r.width/2,300),y:r.top+Math.min(r.height/2,40),tag:el.tagName,slate:el.matches('[data-slate-editor="true"]')};
+    })()`);
+
+    if (!input) return {ok:false,reason:"No visible Flow editor",probe};
+
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:input.x,y:input.y});
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:input.x,y:input.y,button:"left",clickCount:1});
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:input.x,y:input.y,button:"left",clickCount:1});
+    await new Promise(r=>setTimeout(r,300));
+
+    const text="DICIDY FLOW DIRECT TEST — PLEASE SHOW THIS TEXT";
+    await sendCommand(flowTab.id,"Input.insertText",{text});
+    await new Promise(r=>setTimeout(r,500));
+
+    const verify=await evaluate(flowTab.id,`(() => {
+      const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]'));
+      return nodes.filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0}).map(e=>({tag:e.tagName,text:(e.innerText||e.textContent||e.value||"").slice(0,300)}));
+    })()`);
+    return {ok:true,input,probe,text,verify,found:JSON.stringify(verify).includes(text)};
+  } finally {
+    await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
+  }
+}
+
 async function generateAndDownloadOne(flowTab) {
   const downloadStartedAt = Date.now();
 
@@ -860,6 +933,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     })
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ ok:false, error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_TEST_FLOW_DIRECT") {
+    testFlowDirectInput()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ok:false,error:error.message}));
     return true;
   }
 
