@@ -320,7 +320,7 @@ async function generateAndDownloadOne(flowTab) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
-    const generationStart = await evaluate(flowTab.id, \`(() => {
+    const generationStart = await evaluate(flowTab.id, `(() => {
       const videos = Array.from(document.querySelectorAll("video")).filter(video => {
         const r = video.getBoundingClientRect();
         return r.width > 120 && r.height > 80;
@@ -329,9 +329,9 @@ async function generateAndDownloadOne(flowTab) {
         videoCount: videos.length,
         sources: videos.map(video => video.currentSrc || video.src || "")
       };
-    })()\`);
+    })()`);
 
-    const submitted = await evaluate(flowTab.id, \`(() => {
+    const submitted = await evaluate(flowTab.id, `(() => {
       const isVisible = node => {
         const r = node.getBoundingClientRect();
         return r.width > 0 && r.height > 0 &&
@@ -400,7 +400,7 @@ async function generateAndDownloadOne(flowTab) {
         score: target.score,
         nearComposer: target.nearComposer
       };
-    })()\`);
+    })()`);
 
     if (!submitted || !submitted.ok) {
       throw new Error(
@@ -413,7 +413,7 @@ async function generateAndDownloadOne(flowTab) {
     let lastState = null;
 
     while (Date.now() - generationWaitStarted < 600000) {
-      lastState = await evaluate(flowTab.id, \`(() => {
+      lastState = await evaluate(flowTab.id, `(() => {
         const videos = Array.from(document.querySelectorAll("video")).filter(video => {
           const r = video.getBoundingClientRect();
           return r.width > 120 && r.height > 80;
@@ -445,10 +445,10 @@ async function generateAndDownloadOne(flowTab) {
           source: readyVideo ? readyVideo.src : "",
           bodySample: bodyText.slice(-1200)
         };
-      })()\`);
+      })()`);
 
       if (lastState && lastState.ready) {
-        const downloadClicked = await evaluate(flowTab.id, \`(() => {
+        const downloadClicked = await evaluate(flowTab.id, `(() => {
           const isVisible = node => {
             const r = node.getBoundingClientRect();
             return r.width > 0 && r.height > 0 &&
@@ -483,7 +483,7 @@ async function generateAndDownloadOne(flowTab) {
 
           target.node.click();
           return {ok:true,label:target.label};
-        })()\`);
+        })()`);
 
         if (!downloadClicked || !downloadClicked.ok) {
           throw new Error(
