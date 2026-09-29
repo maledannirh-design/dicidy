@@ -261,108 +261,26 @@ async function sendPromptToChat(chatTab, prompt) {
 }
 
 async function prepareFlow(flowTab, compiledPrompt) {
-  await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
-
-  try {
-    const input = await evaluate(
-      flowTab.id,
-      `(() => {
-        const visible = el => {
-          const r = el.getBoundingClientRect();
-          const s = getComputedStyle(el);
-          return r.width > 0 && r.height > 0 &&
-            s.visibility !== "hidden" &&
-            s.display !== "none" &&
-            !el.disabled;
-        };
-
-        const slate = Array.from(document.querySelectorAll('[data-slate-editor="true"]')).filter(visible);
-        const editable = Array.from(document.querySelectorAll('[contenteditable="true"]')).filter(visible);
-        const textarea = Array.from(document.querySelectorAll('textarea')).filter(visible);
-        const el = slate[slate.length - 1] || editable[editable.length - 1] || textarea[textarea.length - 1];
-
-        if (!el) {
-          return {
-            ok: false,
-            reason: "Google Flow Slate prompt editor was not found",
-            slate: slate.length,
-            editable: editable.length,
-            textarea: textarea.length
-          };
-        }
-
-        el.scrollIntoView({block:"center", inline:"center"});
-        const r = el.getBoundingClientRect();
-
-        return {
-          ok: true,
-          tag: el.tagName,
-          slate: el.matches('[data-slate-editor="true"]'),
-          aria: el.getAttribute("aria-label") || "",
-          placeholder: el.getAttribute("data-placeholder") || el.getAttribute("placeholder") || "",
-          clickX: r.left + Math.min(r.width / 2, 300),
-          clickY: r.top + Math.min(r.height / 2, 40)
-        };
-      })()`
-    );
-
-    if (!input || !input.ok) {
-      return { ready: false, reason: JSON.stringify(input || {}) };
-    }
-
-    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-      type: "mouseMoved", x: input.clickX, y: input.clickY
-    });
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-      type: "mousePressed", x: input.clickX, y: input.clickY,
-      button: "left", clickCount: 1
-    });
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
-      type: "mouseReleased", x: input.clickX, y: input.clickY,
-      button: "left", clickCount: 1
-    });
-    await new Promise(resolve => setTimeout(resolve, 250));
-
-    await sendCommand(flowTab.id, "Input.insertText", { text: compiledPrompt });
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const verification = await evaluate(
-      flowTab.id,
-      `(() => {
-        const els = Array.from(document.querySelectorAll('[data-slate-editor="true"], [contenteditable="true"], textarea'));
-        const visible = els.filter(el => {
-          const r = el.getBoundingClientRect();
-          return r.width > 0 && r.height > 0;
-        });
-        const values = visible.map(el => ({
-          tag: el.tagName,
-          text: (el.innerText || el.textContent || el.value || "").trim()
-        }));
-        const needle = ${JSON.stringify(compiledPrompt.slice(0, 80))};
-        return {
-          found: values.some(v => v.text.includes(needle)),
-          values: values.slice(-5)
-        };
-      })()`
-    );
-
-    if (!verification || !verification.found) {
-      return {
-        ready: false,
-        reason: "Flow editor received the click, but prompt text could not be verified in the editor.",
-        input,
-        verification
-      };
-    }
-
-    return { ready: true, input, verification };
-  } finally {
-    await chrome.debugger.detach({ tabId: flowTab.id }).catch(() => {});
+  const result = await chrome.tabs.sendMessage(flowTab.id, {
+    type: "DICIDY_ENTER_FLOW_PROMPT",
+    text: compiledPrompt
+  });
+  if (!result || !result.ok) {
+    return {
+      ready:false,
+      reason: result && result.error
+        ? result.error + " | " + JSON.stringify(result)
+        : "Flow content script did not return a successful result."
+    };
   }
+  return {
+    ready:true,
+    input:{
+      method:"content-script + trusted CDP",
+      verified:!!result.verified,
+      editorText:result.editorText || ""
+    }
+  };
 }
 
 async function generateAndDownloadOne(flowTab) {
@@ -718,6 +636,28 @@ ${item.prompt}`;
   });
 
   return result;
+}
+
+async function trustedDebuggerInput(tabId, type, payload) {
+  await chrome.debugger.attach({ tabId }, "1.3");
+  try {
+    if (type === "click") {
+      await sendCommand(tabId, "Input.dispatchMouseEvent", { type:"mouseMoved", x:payload.x, y:payload.y });
+      await new Promise(r => setTimeout(r, 75));
+      await sendCommand(tabId, "Input.dispatchMouseEvent", {
+        type:"mousePressed", x:payload.x, y:payload.y, button:"left", clickCount:1
+      });
+      await new Promise(r => setTimeout(r, 50));
+      await sendCommand(tabId, "Input.dispatchMouseEvent", {
+        type:"mouseReleased", x:payload.x, y:payload.y, button:"left", clickCount:1
+      });
+    } else {
+      await sendCommand(tabId, "Input.insertText", { text:payload.text });
+    }
+    return {ok:true};
+  } finally {
+    await chrome.debugger.detach({ tabId }).catch(() => {});
+  }
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
