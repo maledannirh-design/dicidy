@@ -1,0 +1,13 @@
+{
+  "name": "dicidy-flow-automation",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local Playwright proof-of-concept for DICIDY Content Factory.",
+  "type": "module",
+  "scripts": {
+    "start": "node runner.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
