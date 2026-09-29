@@ -287,7 +287,7 @@ async function prepareFlowImage(flowTab, product) {
   const imageData = String(product?.imageData || "");
   const imageUrl = String(product?.image || "");
 
-  if (!imageData && !/^https?:\\/\\//i.test(imageUrl)) {
+  if (!imageData && !/^https?:\/\//i.test(imageUrl)) {
     return { ready:false, reason:"No transferable product image found. Re-export the Content Factory job after selecting the local image." };
   }
 
@@ -317,7 +317,7 @@ async function prepareFlowImage(flowTab, product) {
           b.getAttribute("title")||"",
           ...Array.from(b.querySelectorAll("i")).map(i=>i.textContent||"")
         ].join(" ").trim();
-        return /upload|add image|add media|reference|ingredient|photo|image|^\\+$|add_photo/i.test(t);
+        return /upload|add image|add media|reference|ingredient|photo|image|^\+$|add_photo/i.test(t);
       }).slice(-20).map(b => {
         const r=b.getBoundingClientRect();
         return {text:(b.innerText||"").trim(),aria:b.getAttribute("aria-label")||"",title:b.getAttribute("title")||"",x:r.left+r.width/2,y:r.top+r.height/2};
@@ -325,7 +325,7 @@ async function prepareFlowImage(flowTab, product) {
     }))()`);
 
     if (!before.fileInputs) {
-      const candidate = before.buttons.find(b => /add image|add media|reference|ingredient|photo|image|^\\+$/i.test([b.text,b.aria,b.title].join(" "))) || before.buttons[before.buttons.length-1];
+      const candidate = before.buttons.find(b => /add image|add media|reference|ingredient|photo|image|^\+$/i.test([b.text,b.aria,b.title].join(" "))) || before.buttons[before.buttons.length-1];
       if (candidate) {
         await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:candidate.x,y:candidate.y});
         await new Promise(r=>setTimeout(r,75));
