@@ -17,32 +17,50 @@
     <section class="hero">
       <p class="eyebrow">WELCOME TO DICIDY</p>
       <h1>Choose your world.</h1>
-      <p class="intro">Play. Shop. Improve. Trade.</p>
+      <p class="intro">Swipe. Explore. Enter.</p>
     </section>
 
-    <section class="cards" aria-label="DICIDY sections">
-      <a class="card" href="/gaming/">
-        <img src="/assets/gamingcard.png" alt="Gaming">
-        <div class="card-label">GAMING</div>
-      </a>
-      <a class="card" href="/shop/">
-        <img src="/assets/shopcard.png" alt="Shop">
-        <div class="card-label">SHOP</div>
-      </a>
-      <a class="card" href="/sports/">
-        <img src="/assets/sportcard.png" alt="Sports">
-        <div class="card-label">SPORTS</div>
-      </a>
-      <a class="card" href="/trading/">
-        <img src="/assets/tradingcard.png" alt="Trading">
-        <div class="card-label">TRADING</div>
-      </a>
+    <section class="carousel" aria-label="DICIDY sections">
+      <button class="carousel-arrow prev" type="button" aria-label="Previous section">‹</button>
+
+      <div class="carousel-stage">
+        <a class="card active" href="/gaming/" data-index="0" aria-label="Gaming">
+          <img src="/assets/gamingcard.png" alt="Gaming">
+          <div class="card-label">GAMING</div>
+        </a>
+        <a class="card" href="/shop/" data-index="1" aria-label="Shop">
+          <img src="/assets/shopcard.png" alt="Shop">
+          <div class="card-label">SHOP</div>
+        </a>
+        <a class="card" href="/sports/" data-index="2" aria-label="Sports">
+          <img src="/assets/sportcard.png" alt="Sports">
+          <div class="card-label">SPORTS</div>
+        </a>
+        <a class="card" href="/trading/" data-index="3" aria-label="Trading">
+          <img src="/assets/tradingcard.png" alt="Trading">
+          <div class="card-label">TRADING</div>
+        </a>
+      </div>
+
+      <button class="carousel-arrow next" type="button" aria-label="Next section">›</button>
     </section>
+
+    <div class="carousel-meta">
+      <div class="dots" aria-label="Choose section">
+        <button class="dot active" data-index="0" aria-label="Gaming"></button>
+        <button class="dot" data-index="1" aria-label="Shop"></button>
+        <button class="dot" data-index="2" aria-label="Sports"></button>
+        <button class="dot" data-index="3" aria-label="Trading"></button>
+      </div>
+      <p class="swipe-hint">SWIPE LEFT / RIGHT</p>
+    </div>
 
     <footer>
       <span>DICIDY.MY.ID</span>
       <span>© 2026 DICIDY</span>
     </footer>
   </main>
+
+  <script src="/carousel.js"></script>
 </body>
 </html>
