@@ -334,92 +334,67 @@ async function generateAndDownloadOne(flowTab) {
     const submitted = await evaluate(flowTab.id, `(() => {
       const isVisible = node => {
         const r = node.getBoundingClientRect();
-        return r.width > 0 && r.height > 0 &&
+        return r.width > 0 && r.height > 5 &&
           !node.disabled &&
           node.getAttribute("aria-disabled") !== "true";
       };
 
       const inputs = Array.from(document.querySelectorAll(
-        'textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"]'
+        '[data-slate-editor="true"], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]'
       )).filter(isVisible);
 
       const input = inputs[inputs.length - 1];
       if (!input) return { ok: false, reason: "prompt input not found" };
 
-      const ir = input.getBoundingClientRect();
-      const targetX = ir.right - 24;
-      const targetY = ir.bottom - 24;
+      let root = input.parentElement;
+      let hops = 0;
+      const submitIcons = ["arrow_forward", "arrow_upward", "send", "north_east"];
 
-      const candidates = Array.from(document.querySelectorAll(
-        'button, [role="button"], input[type="submit"]'
-      )).filter(isVisible).map(node => {
-        const r = node.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-        const label = [
-          node.innerText || "",
-          node.getAttribute("aria-label") || "",
-          node.getAttribute("title") || "",
-          node.getAttribute("data-testid") || "",
-          node.textContent || ""
-        ].join(" ").trim().toLowerCase();
+      while (root && root !== document.body && hops < 10) {
+        const buttons = Array.from(root.querySelectorAll('button,[role="button"]')).filter(isVisible);
+        const submit = buttons.find(button => {
+          const icons = Array.from(button.querySelectorAll("i"))
+            .map(i => (i.textContent || "").trim());
+          return icons.some(icon => submitIcons.includes(icon));
+        });
 
-        const dx = cx - targetX;
-        const dy = cy - targetY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const nearComposer =
-          r.top >= ir.top - 90 &&
-          r.bottom <= ir.bottom + 90 &&
-          r.left >= ir.left - 90 &&
-          r.right <= ir.right + 90;
+        if (submit) {
+          const r = submit.getBoundingClientRect();
+          return {
+            ok: true,
+            label: [
+              submit.innerText || "",
+              submit.getAttribute("aria-label") || "",
+              submit.getAttribute("title") || "",
+              Array.from(submit.querySelectorAll("i")).map(i => i.textContent.trim()).join(" ")
+            ].join(" ").trim(),
+            icon: Array.from(submit.querySelectorAll("i"))
+              .map(i => i.textContent.trim())
+              .find(icon => submitIcons.includes(icon)) || "",
+            clickX: r.left + r.width / 2,
+            clickY: r.top + r.height / 2,
+            rect: {top:r.top,left:r.left,width:r.width,height:r.height}
+          };
+        }
 
-        let score = nearComposer ? 100 : 0;
-        score -= Math.min(distance, 250) * 0.35;
-        if (label.includes("send")) score += 30;
-        if (label.includes("submit")) score += 30;
-        if (label.includes("generate")) score += 30;
-        if (label.includes("create")) score += 15;
-        if (label.includes("arrow")) score += 15;
-        if (node.querySelector("svg")) score += 5;
-
-        return {
-          node, label, score, nearComposer, distance,
-          rect: {top:r.top,left:r.left,width:r.width,height:r.height},
-          center: {x:cx,y:cy}
-        };
-      }).sort((a,b) => b.score - a.score);
-
-      const target = candidates.find(x => x.nearComposer && x.distance <= 110)
-        || candidates.find(x => x.nearComposer);
-
-      if (!target) {
-        return {
-          ok: false,
-          reason: "composer submit button not found",
-          inputRect: {top:ir.top,left:ir.left,width:ir.width,height:ir.height},
-          candidates: candidates.slice(0,20).map(x => ({
-            label:x.label, score:x.score, nearComposer:x.nearComposer,
-            distance:Math.round(x.distance), rect:x.rect
-          }))
-        };
+        root = root.parentElement;
+        hops++;
       }
 
-      const r = target.rect;
       return {
-        ok: true,
-        label: target.label,
-        score: Math.round(target.score * 100) / 100,
-        nearComposer: target.nearComposer,
-        distance: Math.round(target.distance),
-        clickX: target.center.x,
-        clickY: target.center.y,
-        rect: r
+        ok: false,
+        reason: "Flow submit arrow not found by icon",
+        inputTag: input.tagName,
+        inputRect: (() => {
+          const r = input.getBoundingClientRect();
+          return {top:r.top,left:r.left,width:r.width,height:r.height};
+        })()
       };
     })()`);
 
     if (!submitted || !submitted.ok) {
       throw new Error(
-        "Google Flow prompt submit button was not found. Details: " +
+        "Google Flow submit arrow was not found. Details: " +
         JSON.stringify(submitted || {})
       );
     }
@@ -436,6 +411,7 @@ async function generateAndDownloadOne(flowTab) {
       button: "left",
       clickCount: 1
     });
+    await new Promise(resolve => setTimeout(resolve, 50));
     await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
       type: "mouseReleased",
       x: submitted.clickX,
@@ -443,13 +419,6 @@ async function generateAndDownloadOne(flowTab) {
       button: "left",
       clickCount: 1
     });
-
-    if (!submitted || !submitted.ok) {
-      throw new Error(
-        "Google Flow prompt submit button was not found. Details: " +
-        JSON.stringify(submitted || {})
-      );
-    }
 
     const generationWaitStarted = Date.now();
     let lastState = null;
