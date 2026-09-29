@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Affiliate OS Access</title>
 <link rel="stylesheet" href="/styles.css">
+<style>
+.verification-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000}
+.verification-overlay.hidden{display:none}
+.verification-modal{width:min(520px,100%);background:#101010;border:1px solid var(--line);padding:32px;box-shadow:0 20px 70px rgba(0,0,0,.5)}
+.verification-modal h2{font-family:Georgia,serif;font-weight:400;font-size:34px;margin:8px 0 12px}
+.verification-modal p{color:#999;line-height:1.65}
+.verification-modal .verify-email{margin:18px 0;padding:14px;border:1px solid #262626;color:#ddd;word-break:break-word}
+.verification-modal .verify-actions{display:flex;gap:10px;margin-top:22px}
+.verification-modal .verify-actions a,.verification-modal .verify-actions button{flex:1;text-align:center}
+@media(max-width:600px){.verification-modal{padding:24px}.verification-modal .verify-actions{flex-direction:column}}
+</style>
 </head>
 <body>
 <main class="subpage auth-page">
@@ -57,6 +68,20 @@
 <a class="back" href="/shop/affiliator/">← Back to Affiliate OS</a>
 </main>
 
+<div class="verification-overlay hidden" id="verificationModal" aria-hidden="true">
+  <div class="verification-modal" role="dialog" aria-modal="true" aria-labelledby="verificationTitle">
+    <div class="kicker">ACCOUNT CREATED</div>
+    <h2 id="verificationTitle">Check your email.</h2>
+    <p>Please check your inbox or <strong>Spam / Junk</strong> folder for the email verification link from DICIDY.</p>
+    <div class="verify-email" id="verificationEmail">—</div>
+    <p>After verifying your email, return to the login menu and sign in to continue.</p>
+    <div class="verify-actions">
+      <a class="auth-button" href="/shop/affiliator/">GO TO LOGIN</a>
+      <button class="secondary" type="button" id="closeVerification">CLOSE</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { auth, db } from "../firebase-config.js";
 import {
@@ -75,6 +100,22 @@ import {
 const form = document.getElementById("registerForm");
 const button = document.getElementById("registerButton");
 const status = document.getElementById("registerStatus");
+const verificationModal = document.getElementById("verificationModal");
+const verificationEmail = document.getElementById("verificationEmail");
+const closeVerification = document.getElementById("closeVerification");
+
+function showVerificationModal(email) {
+  verificationEmail.textContent = email;
+  verificationModal.classList.remove("hidden");
+  verificationModal.setAttribute("aria-hidden", "false");
+}
+
+function hideVerificationModal() {
+  verificationModal.classList.add("hidden");
+  verificationModal.setAttribute("aria-hidden", "true");
+}
+
+closeVerification.addEventListener("click", hideVerificationModal);
 
 function friendlyError(error) {
   const map = {
@@ -155,8 +196,9 @@ form.addEventListener("submit", async (event) => {
     await sendEmailVerification(user);
     await signOut(auth);
 
-    status.textContent = "Account dibuat. Cek email untuk verifikasi. Setelah verified, akun masuk ke antrean approval admin.";
+    status.textContent = "Verification email sent. Please check your inbox or Spam / Junk folder.";
     form.reset();
+    showVerificationModal(email);
   } catch (error) {
     status.textContent = friendlyError(error);
   } finally {
