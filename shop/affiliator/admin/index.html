@@ -143,7 +143,7 @@ $("memberRows").querySelectorAll("[data-review]").forEach(b=>b.onclick=()=>selec
 }
 function renderPermissions(values){
 const pkg=$("packageSelect").value,defs=PACKAGE_DEFAULTS[pkg];
-$("permissionRows").innerHTML=Object.keys(FEATURES).map(k=>"<tr><td>"+FEATURES[k]+"</td><td>"+(defs[k]?"✓":"—")+"</td><td><input type="checkbox" data-permission=""+k+"" "+(values[k]?"checked":"")+"></td></tr>").join("");
+$("permissionRows").innerHTML=Object.keys(FEATURES).map(k=>"<tr><td>"+FEATURES[k]+"</td><td>"+(defs[k]?"✓":"—")+"</td><td><input type=\"checkbox\" data-permission=\""+k+"\" "+(values[k]?"checked":"")+"></td></tr>").join("");
 }
 function getPermissions(){const v={};$("permissionRows").querySelectorAll("[data-permission]").forEach(i=>v[i.dataset.permission]=i.checked);return v}
 function fillReview(d){
