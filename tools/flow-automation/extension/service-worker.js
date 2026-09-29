@@ -761,6 +761,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "DICIDY_TRUSTED_CLICK") {
+    trustedDebuggerInput(message.tabId || _sender.tab?.id, "click", {
+      x: Number(message.x),
+      y: Number(message.y)
+    })
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ ok:false, error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_TRUSTED_TYPE") {
+    trustedDebuggerInput(message.tabId || _sender.tab?.id, "type", {
+      text: String(message.text || "")
+    })
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ ok:false, error:error.message }));
+    return true;
+  }
+
   if (message.type === "DICIDY_RUN_ONE_JOB") {
     runOneJob()
       .then(result => sendResponse({ ok: true, ...result }))
