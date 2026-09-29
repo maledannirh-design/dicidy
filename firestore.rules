@@ -25,6 +25,7 @@ service cloud.firestore {
           'role',
           'approvalStatus',
           'package',
+          'requestedPackage',
           'emailVerified',
           'trialStartedAt',
           'trialEndsAt',
@@ -39,6 +40,7 @@ service cloud.firestore {
         && request.resource.data.role == 'MEMBER'
         && request.resource.data.approvalStatus == 'PENDING'
         && request.resource.data.package == null
+        && request.resource.data.requestedPackage == null
         && request.resource.data.emailVerified == false
         && request.resource.data.trialStartedAt == null
         && request.resource.data.trialEndsAt == null
@@ -48,8 +50,8 @@ service cloud.firestore {
       // Members can read their own profile. Admins can read all member profiles.
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
 
-      // Members may only sync verification/profile-safe fields.
-      // Membership, role, package and approval fields remain admin-controlled.
+      // Members may sync verification/profile-safe fields and submit one package request.
+      // Membership, role, package and approval remain admin-controlled.
       allow update: if isAdmin()
         || (
           signedIn()
@@ -57,11 +59,13 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'emailVerified',
             'photoURL',
+            'requestedPackage',
             'updatedAt'
           ])
           && request.resource.data.role == resource.data.role
           && request.resource.data.approvalStatus == resource.data.approvalStatus
           && request.resource.data.package == resource.data.package
+          && request.resource.data.requestedPackage in [null, 'BASIC', 'PRO', 'PRO_COUNSELLING', 'DIAMOND']
         );
 
       allow delete: if isAdmin();
