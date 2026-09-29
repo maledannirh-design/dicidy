@@ -4,8 +4,10 @@ import { chromium } from "playwright";
 
 const ROOT = path.resolve(process.cwd());
 const JOB_FILE = path.join(ROOT, "job.json");
-const PROFILE = path.join(ROOT, "profiles", "dicidy-flow");
+const RESULT_FILE = path.join(ROOT, "job-result.json");
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1000;
+const CHAT_RESPONSE_TIMEOUT_MS = 4 * 60 * 1000;
+const CDP_ENDPOINT = process.env.DICIDY_CDP_ENDPOINT || "http://127.0.0.1:9222";
 
 function log(message) {
   console.log(`[DICIDY FLOW] ${new Date().toLocaleTimeString()} ${message}`);
@@ -22,24 +24,50 @@ if (!Array.isArray(job.jobs) || !job.jobs.length) {
   process.exit(1);
 }
 
-fs.mkdirSync(PROFILE, { recursive: true });
+async function connectToExistingChrome() {
+  log(`Connecting to existing Chrome: ${CDP_ENDPOINT}`);
 
-const context = await chromium.launchPersistentContext(PROFILE, {
-  channel: "chrome",
-  headless: false,
-  viewport: { width: 1440, height: 900 }
-});
+  try {
+    const browser = await chromium.connectOverCDP(CDP_ENDPOINT);
+    const contexts = browser.contexts();
 
-const chat = await context.newPage();
-const flow = await context.newPage();
+    if (!contexts.length) {
+      throw new Error("Chrome connected, but no browser context is available.");
+    }
 
-await chat.goto("https://chatgpt.com/", { waitUntil: "domcontentloaded" });
-await flow.goto("https://flow.google/", { waitUntil: "domcontentloaded" });
+    const context = contexts[0];
+    log(`Connected. Existing tabs: ${context.pages().length}`);
+    return { browser, context };
+  } catch (error) {
+    console.error("\nCould not connect to the existing Chrome session.");
+    console.error(`Endpoint: ${CDP_ENDPOINT}`);
+    console.error("Make sure Chrome is open and remote debugging is allowed for this browser instance.");
+    console.error("In Chrome open: chrome://inspect/#remote-debugging");
+    console.error("Then enable: Allow remote debugging for this browser instance.");
+    console.error("If Chrome exposes a different endpoint, set DICIDY_CDP_ENDPOINT before running.");
+    console.error(`Original error: ${error.message}\n`);
+    process.exit(1);
+  }
+}
 
-console.log("\nDICIDY Flow POC");
-console.log("IMPORTANT: The runner will NOT type anything until login/access is detected.");
-console.log("Complete any required login manually in the opened Chrome window.");
-console.log("The automation will not receive or store your password.\n");
+function findTab(context, pattern) {
+  return context.pages().find(page => pattern.test(page.url()));
+}
+
+async function getOrOpenTab(context, pattern, url, label) {
+  let page = findTab(context, pattern);
+
+  if (!page) {
+    log(`No existing ${label} tab found. Opening it in the current Chrome session.`);
+    page = await context.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+  } else {
+    log(`Reusing existing ${label} tab.`);
+  }
+
+  await page.bringToFront().catch(() => {});
+  return page;
+}
 
 async function pageLooksLoggedIn(page, kind) {
   if (kind === "chat") {
@@ -61,53 +89,53 @@ async function pageLooksLoggedIn(page, kind) {
     return false;
   }
 
-  const candidates = [
-    page.locator("textarea").last(),
-    page.locator('[contenteditable="true"]').last()
-  ];
-
-  for (const candidate of candidates) {
-    if (await candidate.count()) return true;
-  }
-
   return true;
 }
 
-async function waitForAccess() {
-  log("Checking ChatGPT login...");
+async function waitForAccess(chat, flow) {
+  log("Checking existing Chrome authentication...");
   const started = Date.now();
 
   while (Date.now() - started < LOGIN_TIMEOUT_MS) {
-    if (await pageLooksLoggedIn(chat, "chat")) {
-      log("ChatGPT access detected.");
-      break;
-    }
+    const chatReady = await pageLooksLoggedIn(chat, "chat");
+    const flowReady = await pageLooksLoggedIn(flow, "flow");
 
-    log("ChatGPT is not ready. Please log in manually in the opened Chrome window.");
-    await chat.waitForTimeout(3000);
-  }
-
-  if (!(await pageLooksLoggedIn(chat, "chat"))) {
-    throw new Error("ChatGPT login/access was not detected within 10 minutes.");
-  }
-
-  log("Checking Google Flow access...");
-  const flowStarted = Date.now();
-
-  while (Date.now() - flowStarted < LOGIN_TIMEOUT_MS) {
-    if (await pageLooksLoggedIn(flow, "flow")) {
-      log("Google Flow page is accessible.");
+    if (chatReady && flowReady) {
+      log("Existing ChatGPT + Google Flow sessions detected.");
       return;
     }
 
-    log("Google Flow is not ready. Complete any required account/access step manually.");
-    await flow.waitForTimeout(3000);
+    if (!chatReady) {
+      log("ChatGPT session is not ready. Log in manually in this existing Chrome window if required.");
+    }
+
+    if (!flowReady) {
+      log("Google Flow session is not ready. Complete any required account/access step manually.");
+    }
+
+    await chat.waitForTimeout(3000);
   }
 
-  throw new Error("Google Flow access was not detected within 10 minutes.");
+  throw new Error("Existing ChatGPT/Google Flow access was not detected within 10 minutes.");
 }
 
-async function sendToChatGPT(prompt) {
+async function getChatInput(page) {
+  const selectors = [
+    page.locator("textarea").last(),
+    page.locator('[contenteditable="true"][role="textbox"]').last(),
+    page.locator('[contenteditable="true"]').last()
+  ];
+
+  for (const candidate of selectors) {
+    if (await candidate.count() && await candidate.isVisible().catch(() => false)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function sendToChatGPT(page, prompt) {
   const instruction =
 `You are the prompt compiler for a video-generation workflow.
 Return ONLY one production-ready Google Flow video prompt.
@@ -118,40 +146,61 @@ The video must be vertical 9:16 and suitable for a TikTok affiliate video.
 JOB INPUT:
 ${prompt}`;
 
-  const box = chat.locator("textarea").last();
-  if (await box.count()) {
-    await box.fill(instruction);
-    await box.press("Enter");
-  } else {
-    const editable = chat.locator('[contenteditable="true"]').last();
-    if (!(await editable.count())) throw new Error("ChatGPT input was not found.");
-    await editable.fill(instruction);
-    await editable.press("Enter");
+  await page.bringToFront().catch(() => {});
+
+  const input = await getChatInput(page);
+  if (!input) {
+    throw new Error("ChatGPT input was not found. Make sure the existing ChatGPT tab is fully loaded.");
   }
 
-  await chat.waitForTimeout(1500);
+  const beforeCount = await page.locator('[data-message-author-role="assistant"]').count();
+
+  await input.fill(instruction);
+  await input.press("Enter");
+
+  log(`ChatGPT request sent. Waiting for a new assistant response (existing: ${beforeCount})...`);
+
   const started = Date.now();
+  let lastText = "";
+  let stableSince = 0;
 
-  while (Date.now() - started < 120000) {
-    const messages = chat.locator('[data-message-author-role="assistant"]');
-    if (await messages.count()) {
-      const text = (await messages.last().innerText()).trim();
-      if (text && !/^(Thinking|Generating|Searching)/i.test(text)) return text;
+  while (Date.now() - started < CHAT_RESPONSE_TIMEOUT_MS) {
+    const messages = page.locator('[data-message-author-role="assistant"]');
+    const count = await messages.count();
+
+    if (count > beforeCount) {
+      const current = (await messages.last().innerText().catch(() => "")).trim();
+
+      if (current && !/^(Thinking|Generating|Searching)\\b/i.test(current)) {
+        if (current === lastText) {
+          if (!stableSince) stableSince = Date.now();
+          if (Date.now() - stableSince >= 1800) {
+            return current;
+          }
+        } else {
+          lastText = current;
+          stableSince = Date.now();
+        }
+      }
     }
-    await chat.waitForTimeout(1500);
+
+    await page.waitForTimeout(1200);
   }
 
-  throw new Error("Timed out waiting for a ChatGPT response.");
+  throw new Error("Timed out waiting for a new ChatGPT response.");
 }
 
-async function prepareFlowPrompt(prompt) {
+async function prepareFlowPrompt(page, prompt) {
+  await page.bringToFront().catch(() => {});
+
   const candidates = [
-    flow.locator("textarea").last(),
-    flow.locator('[contenteditable="true"]').last()
+    page.locator("textarea").last(),
+    page.locator('[contenteditable="true"][role="textbox"]').last(),
+    page.locator('[contenteditable="true"]').last()
   ];
 
   for (const candidate of candidates) {
-    if (await candidate.count()) {
+    if (await candidate.count() && await candidate.isVisible().catch(() => false)) {
       await candidate.fill(prompt);
       return true;
     }
@@ -160,44 +209,63 @@ async function prepareFlowPrompt(prompt) {
   return false;
 }
 
-await waitForAccess();
+const { browser, context } = await connectToExistingChrome();
 
-// POC safety mode: process ONE job only until the live ChatGPT + Flow handoff
-// has been verified. The remaining jobs stay untouched in job.json.
+const chat = await getOrOpenTab(
+  context,
+  /^https:\/\/(chatgpt\.com|chat\.openai\.com)/i,
+  "https://chatgpt.com/",
+  "ChatGPT"
+);
+
+const flow = await getOrOpenTab(
+  context,
+  /^https:\/\/flow\.google\.com/i,
+  "https://flow.google/",
+  "Google Flow"
+);
+
+console.log("\nDICIDY Flow Automation");
+console.log("MODE: EXISTING CHROME");
+console.log("The runner does not create a separate Chrome profile.");
+console.log("Your existing browser session/cookies remain in Chrome.");
+console.log("The runner does not receive or store passwords.\n");
+
+await waitForAccess(chat, flow);
+
+// Keep the first live run intentionally limited to one job.
+// Once the live handoff is verified, the queue can be expanded safely.
 const item = job.jobs[0];
 log(`POC JOB 1/1: ${item.angle}`);
 
 try {
   log("Compiling Flow prompt in ChatGPT...");
-  const compiledPrompt = await sendToChatGPT(item.prompt);
+  const compiledPrompt = await sendToChatGPT(chat, item.prompt);
 
   log("Prompt received.");
   console.log("\n--- FLOW PROMPT ---\n" + compiledPrompt + "\n--- END PROMPT ---\n");
 
-  const placed = await prepareFlowPrompt(compiledPrompt);
+  const placed = await prepareFlowPrompt(flow, compiledPrompt);
 
-  if (!placed) {
-    item.status = "FLOW_PROMPT_READY_MANUAL";
-    item.compiledPrompt = compiledPrompt;
-    log("Flow prompt input was not identified. POC stopped for live selector verification.");
-  } else {
-    item.status = "FLOW_PROMPT_READY";
-    item.compiledPrompt = compiledPrompt;
+  item.compiledPrompt = compiledPrompt;
+  item.status = placed ? "FLOW_PROMPT_READY" : "FLOW_PROMPT_READY_MANUAL";
+
+  if (placed) {
     log("Prompt placed in Google Flow.");
+  } else {
+    log("Flow prompt input was not identified. POC stopped for live selector verification.");
   }
 
-  console.log("\nPOC STOP: no Generate click. Inspect the Flow page manually.");
+  console.log("\nPOC STOP: no Generate click yet. Inspect the existing Flow tab manually.");
 } catch (error) {
   item.status = "ERROR";
   item.error = error.message;
   log(`ERROR: ${error.message}`);
 }
 
-fs.writeFileSync(
-  path.join(ROOT, "job-result.json"),
-  JSON.stringify(job, null, 2),
-  "utf8"
-);
+fs.writeFileSync(RESULT_FILE, JSON.stringify(job, null, 2), "utf8");
 
 log("POC finished. Result saved to job-result.json.");
-console.log("You can close the automation browser when you are finished inspecting it.");
+console.log("The runner will leave your existing Chrome open.");
+
+await browser.close().catch(() => {});
