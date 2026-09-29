@@ -13,15 +13,17 @@ async function evaluate(tabId, expression) {
     }
   );
 
-  if (result?.exceptionDetails) {
+  if (result && result.exceptionDetails) {
     throw new Error(result.exceptionDetails.text || "Runtime.evaluate failed.");
   }
 
-  return result?.result?.value;
+  return result && result.result ? result.result.value : undefined;
 }
 
 async function inspectTab(tab, role) {
-  if (!tab?.id) throw new Error(`No tab id for ${role}.`);
+  if (!tab || !tab.id) {
+    throw new Error("No tab id for " + role + ".");
+  }
 
   await chrome.debugger.attach({ tabId: tab.id }, "1.3");
 
@@ -33,7 +35,7 @@ async function inspectTab(tab, role) {
         title: document.title,
         url: location.href,
         readyState: document.readyState,
-        bodyTextSample: (document.body?.innerText || "").replace(/\\s+/g, " ").slice(0, 300)
+        bodyTextSample: (document.body?.innerText || "").split("\\n").join(" ").slice(0, 300)
       }))()`
     );
   } finally {
@@ -51,7 +53,9 @@ async function findTargets() {
 
   const flowCandidates = tabs.filter(tab => {
     const value = String(tab.url || tab.pendingUrl || "").toLowerCase();
-    return FLOW_HOSTS.some(host => value.includes(host)) && value.includes("flow");
+
+    return FLOW_HOSTS.some(host => value.includes(host)) &&
+      value.includes("flow");
   });
 
   const flow = flowCandidates[0] || null;
@@ -60,7 +64,11 @@ async function findTargets() {
 }
 
 async function runDiagnostic() {
-  const { tabs, chat, flow, flowCandidates } = await findTargets();
+  const targets = await findTargets();
+  const tabs = targets.tabs;
+  const chat = targets.chat;
+  const flow = targets.flow;
+  const flowCandidates = targets.flowCandidates;
 
   const result = {
     ok: false,
@@ -78,12 +86,14 @@ async function runDiagnostic() {
   };
 
   if (!chat) {
-    result.errors.push(`ChatGPT tab with title containing "${CHAT_TITLE}" was not found.`);
+    result.errors.push(
+      "ChatGPT tab with title containing " + CHAT_TITLE + " was not found."
+    );
   } else {
     try {
       result.chat = await inspectTab(chat, "chatgpt");
     } catch (error) {
-      result.errors.push(`ChatGPT debugger attach failed: ${error.message}`);
+      result.errors.push("ChatGPT debugger attach failed: " + error.message);
     }
   }
 
@@ -93,28 +103,33 @@ async function runDiagnostic() {
     try {
       result.flow = await inspectTab(flow, "flow");
     } catch (error) {
-      result.errors.push(`Google Flow debugger attach failed: ${error.message}`);
+      result.errors.push("Google Flow debugger attach failed: " + error.message);
     }
   }
 
-  result.ok = Boolean(result.chat && result.flow && result.errors.length === 0);
+  result.ok = Boolean(
+    result.chat &&
+    result.flow &&
+    result.errors.length === 0
+  );
 
-  // Optional local bridge log. The diagnostic still works if the Node bridge is not running.
   try {
-    await fetch(`${BRIDGE_URL}/api/diagnostic`, {
+    await fetch(BRIDGE_URL + "/api/diagnostic", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(result)
     });
   } catch (_) {
-    // Local logging server is optional during this first bridge test.
+    // Local logging server is optional.
   }
 
   return result;
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "DICIDY_RUN_DIAGNOSTIC") return;
+  if (!message || message.type !== "DICIDY_RUN_DIAGNOSTIC") {
+    return;
+  }
 
   runDiagnostic()
     .then(result => sendResponse(result))
@@ -124,6 +139,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       browserTabCount: 0,
       chat: null,
       flow: null,
+      flowCandidates: [],
       errors: [error.message]
     }));
 
