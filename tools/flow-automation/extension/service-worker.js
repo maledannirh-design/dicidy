@@ -347,11 +347,15 @@ async function generateAndDownloadOne(flowTab) {
       if (!input) return { ok: false, reason: "prompt input not found" };
 
       const ir = input.getBoundingClientRect();
+      const targetX = ir.right - 24;
+      const targetY = ir.bottom - 24;
 
       const candidates = Array.from(document.querySelectorAll(
         'button, [role="button"], input[type="submit"]'
       )).filter(isVisible).map(node => {
         const r = node.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
         const label = [
           node.innerText || "",
           node.getAttribute("aria-label") || "",
@@ -360,26 +364,33 @@ async function generateAndDownloadOne(flowTab) {
           node.textContent || ""
         ].join(" ").trim().toLowerCase();
 
+        const dx = cx - targetX;
+        const dy = cy - targetY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
         const nearComposer =
-          r.top >= ir.top - 180 &&
-          r.bottom <= ir.bottom + 180 &&
-          r.left >= ir.left - 180 &&
-          r.right <= ir.right + 180;
+          r.top >= ir.top - 90 &&
+          r.bottom <= ir.bottom + 90 &&
+          r.left >= ir.left - 90 &&
+          r.right <= ir.right + 90;
 
-        let score = 0;
-        if (nearComposer) score += 50;
-        if (label.includes("send")) score += 20;
-        if (label.includes("submit")) score += 20;
-        if (label.includes("generate")) score += 20;
-        if (label.includes("create")) score += 10;
-        if (label.includes("arrow")) score += 10;
+        let score = nearComposer ? 100 : 0;
+        score -= Math.min(distance, 250) * 0.35;
+        if (label.includes("send")) score += 30;
+        if (label.includes("submit")) score += 30;
+        if (label.includes("generate")) score += 30;
+        if (label.includes("create")) score += 15;
+        if (label.includes("arrow")) score += 15;
         if (node.querySelector("svg")) score += 5;
 
-        return { node, label, score, nearComposer, top:r.top, left:r.left };
+        return {
+          node, label, score, nearComposer, distance,
+          rect: {top:r.top,left:r.left,width:r.width,height:r.height},
+          center: {x:cx,y:cy}
+        };
       }).sort((a,b) => b.score - a.score);
 
-      const target = candidates.find(x => x.nearComposer && x.score >= 55)
-        || candidates.find(x => x.nearComposer && x.score >= 50);
+      const target = candidates.find(x => x.nearComposer && x.distance <= 110)
+        || candidates.find(x => x.nearComposer);
 
       if (!target) {
         return {
@@ -388,19 +399,50 @@ async function generateAndDownloadOne(flowTab) {
           inputRect: {top:ir.top,left:ir.left,width:ir.width,height:ir.height},
           candidates: candidates.slice(0,20).map(x => ({
             label:x.label, score:x.score, nearComposer:x.nearComposer,
-            top:x.top,left:x.left
+            distance:Math.round(x.distance), rect:x.rect
           }))
         };
       }
 
-      target.node.click();
+      const r = target.rect;
       return {
         ok: true,
         label: target.label,
-        score: target.score,
-        nearComposer: target.nearComposer
+        score: Math.round(target.score * 100) / 100,
+        nearComposer: target.nearComposer,
+        distance: Math.round(target.distance),
+        clickX: target.center.x,
+        clickY: target.center.y,
+        rect: r
       };
     })()`);
+
+    if (!submitted || !submitted.ok) {
+      throw new Error(
+        "Google Flow prompt submit button was not found. Details: " +
+        JSON.stringify(submitted || {})
+      );
+    }
+
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: submitted.clickX,
+      y: submitted.clickY
+    });
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      x: submitted.clickX,
+      y: submitted.clickY,
+      button: "left",
+      clickCount: 1
+    });
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseReleased",
+      x: submitted.clickX,
+      y: submitted.clickY,
+      button: "left",
+      clickCount: 1
+    });
 
     if (!submitted || !submitted.ok) {
       throw new Error(
