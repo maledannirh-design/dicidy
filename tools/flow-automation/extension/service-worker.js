@@ -283,6 +283,84 @@ async function prepareFlow(flowTab, compiledPrompt) {
   };
 }
 
+async function prepareFlowImage(flowTab, product) {
+  const imageData = String(product?.imageData || "");
+  const imageUrl = String(product?.image || "");
+
+  if (!imageData && !/^https?:\\/\\//i.test(imageUrl)) {
+    return { ready:false, reason:"No transferable product image found. Re-export the Content Factory job after selecting the local image." };
+  }
+
+  const staged = await bridgeRequest("/api/image-file", {
+    method:"POST",
+    body:JSON.stringify({
+      dataUrl:imageData,
+      sourceUrl:imageUrl,
+      fileName:product?.imageFileName || "product-image"
+    })
+  });
+
+  if (!staged || !staged.ok || !staged.path) {
+    return {ready:false,reason:"Local image staging failed: "+JSON.stringify(staged || {})};
+  }
+
+  await chrome.debugger.attach({tabId:flowTab.id},"1.3");
+  try {
+    const before = await evaluate(flowTab.id, `(() => ({
+      fileInputs:Array.from(document.querySelectorAll('input[type="file"]')).length,
+      buttons:Array.from(document.querySelectorAll('button,[role="button"]')).filter(b => {
+        const r=b.getBoundingClientRect();
+        if(!(r.width>0&&r.height>0)) return false;
+        const t=[
+          b.innerText||"",
+          b.getAttribute("aria-label")||"",
+          b.getAttribute("title")||"",
+          ...Array.from(b.querySelectorAll("i")).map(i=>i.textContent||"")
+        ].join(" ").trim();
+        return /upload|add image|add media|reference|ingredient|photo|image|^\\+$|add_photo/i.test(t);
+      }).slice(-20).map(b => {
+        const r=b.getBoundingClientRect();
+        return {text:(b.innerText||"").trim(),aria:b.getAttribute("aria-label")||"",title:b.getAttribute("title")||"",x:r.left+r.width/2,y:r.top+r.height/2};
+      })
+    }))()`);
+
+    if (!before.fileInputs) {
+      const candidate = before.buttons.find(b => /add image|add media|reference|ingredient|photo|image|^\\+$/i.test([b.text,b.aria,b.title].join(" "))) || before.buttons[before.buttons.length-1];
+      if (candidate) {
+        await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:candidate.x,y:candidate.y});
+        await new Promise(r=>setTimeout(r,75));
+        await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:candidate.x,y:candidate.y,button:"left",clickCount:1});
+        await new Promise(r=>setTimeout(r,50));
+        await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:candidate.x,y:candidate.y,button:"left",clickCount:1});
+        await new Promise(r=>setTimeout(r,500));
+      }
+    }
+
+    await sendCommand(flowTab.id,"DOM.enable",{});
+    const doc=await sendCommand(flowTab.id,"DOM.getDocument",{depth:-1});
+    const q=await sendCommand(flowTab.id,"DOM.querySelector",{nodeId:doc.root.nodeId,selector:'input[type="file"]'});
+
+    if (!q || !q.nodeId) {
+      return {ready:false,reason:"Flow file input was not found after opening the media control.",diagnostic:before};
+    }
+
+    await sendCommand(flowTab.id,"DOM.setFileInputFiles",{nodeId:q.nodeId,files:[staged.path]});
+    await new Promise(r=>setTimeout(r,1200));
+
+    const verify=await evaluate(flowTab.id,`(() => {
+      const inputs=Array.from(document.querySelectorAll('input[type="file"]'));
+      return inputs.map(i => ({files:i.files ? Array.from(i.files).map(f => ({name:f.name,size:f.size,type:f.type})) : []}));
+    })()`);
+
+    const hasFile=Array.isArray(verify) && verify.some(x => Array.isArray(x.files) && x.files.length);
+    if (!hasFile) return {ready:false,reason:"Flow file input accepted the command but no file is visible in the input.",verify};
+
+    return {ready:true,path:staged.path,verify};
+  } finally {
+    await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
+  }
+}
+
 async function generateAndDownloadOne(flowTab) {
   const downloadStartedAt = Date.now();
 
@@ -616,13 +694,18 @@ ${item.prompt}`;
 
   const flowResult = await prepareFlow(targets.flow, compiledPrompt);
 
-  let generation = null;
+  let imageResult = null;
   if (flowResult.ready) {
+    imageResult = await prepareFlowImage(targets.flow, job.product || {});
+  }
+
+  let generation = null;
+  if (imageResult && imageResult.ready) {
     generation = await generateAndDownloadOne(targets.flow);
   }
 
   const result = {
-    status: generation ? "VIDEO_GENERATED_AND_DOWNLOADED" : (flowResult.ready ? "FLOW_PROMPT_READY" : "FLOW_PROMPT_NOT_READY"),
+    status: generation ? "VIDEO_GENERATED_AND_DOWNLOADED" : (imageResult?.ready ? "FLOW_IMAGE_READY" : (flowResult.ready ? "FLOW_PROMPT_READY" : "FLOW_PROMPT_NOT_READY")),
     compiledPrompt,
     flow: flowResult,
     generation,
