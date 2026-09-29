@@ -274,7 +274,7 @@ function renderChips(){
   if(priceMode==="high") chips.push('<span class="filter-chip">Price: High → Low</span>');
   selectedSignals.forEach(s=>chips.push('<span class="filter-chip premium-chip">'+signalLabel(s)+'</span>'));
   filterSummary.innerHTML=chips.length
-    ? '<span class="filter-summary-label">Active filters</span>'+chips.join('')
+    ? '<span class="filter-summary-label">Active filters</span>'+chips.join("")
     : '<span class="filter-summary-label">Active filters</span><span class="filter-chip">None</span>';
 }
 
