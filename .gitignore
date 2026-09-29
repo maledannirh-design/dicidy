@@ -2,3 +2,4 @@
 tools/flow-automation/profiles/
 tools/flow-automation/job.json
 tools/flow-automation/job-result.json
+tools/flow-automation/bridge-diagnostic.json
