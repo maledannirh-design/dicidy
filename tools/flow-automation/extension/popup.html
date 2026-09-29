@@ -45,8 +45,10 @@
     <h1>DICIDY Flow Automation Bridge</h1>
     <p>First test only: verify that this extension can inspect your existing ChatGPT and Google Flow tabs without creating a new Chrome profile.</p>
     <button id="test">TEST EXISTING CHROME</button>
+    <button id="run" style="margin-top:8px;">RUN 1 JOB → FLOW</button>
     <div class="note">No passwords or cookies are exported.</div>
     <pre id="result">Waiting for test…</pre>
+    <p class="note">RUN 1 JOB sends the first local Content Factory job to the dedicated ChatGPT room, waits for the compiled prompt, and places it into the visible Google Flow prompt field. It does not click Generate.</p>
   </main>
   <script src="popup.js"></script>
 </body>
