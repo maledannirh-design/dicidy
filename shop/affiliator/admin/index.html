@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DICIDY Affiliate OS Admin</title>
 <link rel="stylesheet" href="/styles.css">
+<style>
+.admin-gate{max-width:560px;margin:40px auto 0;padding:32px;border:1px solid var(--line);background:#101010}
+.admin-gate h2{font-family:Georgia,serif;font-weight:400;font-size:34px;margin:8px 0 10px}
+.admin-gate p{color:#888;line-height:1.6}
+.admin-page .hidden{display:none!important}
+.admin-userbar{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--line);background:#101010;margin-top:20px}
+.admin-userbar small{display:block;color:#777;margin-top:4px}
+.admin-message{margin-top:14px;color:#b9d7bc;font-size:11px;line-height:1.5}
+.admin-error{color:#d9a7a7}
+.member-row.selected{background:#171717}
+.member-row button{white-space:nowrap}
+.empty-state{padding:28px;color:#777;text-align:center}
+</style>
 </head>
 <body>
 <main class="subpage admin-page">
@@ -13,53 +26,96 @@
 <div class="tagline">ADMIN / AFFILIATE OS</div>
 </header>
 
+<div id="adminGate" class="admin-gate">
+<div class="kicker">DICIDY / ADMIN ACCESS</div>
+<h2>Administrator login.</h2>
+<p id="gateMessage">Sign in with an account that has <strong>role = ADMIN</strong>.</p>
+<form id="adminLoginForm">
+<label class="login-modal label">Email
+<input id="adminEmail" type="email" placeholder="admin@example.com" autocomplete="email" required>
+</label>
+<label class="login-modal label">Password
+<input id="adminPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+</label>
+<button class="auth-button login-submit" id="adminLoginButton" type="submit">LOGIN AS ADMIN</button>
+</form>
+<div id="adminLoginStatus" class="admin-message"></div>
+</div>
+
+<div id="adminApp" class="hidden">
 <section class="admin-head">
-<div><div class="kicker">DICIDY / ADMIN</div><h1>MEMBER CONTROL.</h1><p>Approve members, assign packages and control feature access with a permission matrix.</p></div>
-<a class="admin-exit" href="/shop/affiliator/">Affiliate OS →</a>
+<div>
+<div class="kicker">DICIDY / ADMIN</div>
+<h1>MEMBER CONTROL.</h1>
+<p>Live member approvals, package assignment and feature permissions from Firestore.</p>
+</div>
+<button class="admin-exit" id="adminLogout">LOG OUT</button>
 </section>
+
+<div class="admin-userbar">
+<div><strong id="adminIdentity">Administrator</strong><small id="adminIdentityEmail"></small></div>
+<span class="auth-status">ADMIN VERIFIED</span>
+</div>
 
 <section class="admin-stats">
-<div><span>12</span><small>PENDING</small></div>
-<div><span>48</span><small>ACTIVE</small></div>
-<div><span>7</span><small>EXPIRED</small></div>
-<div><span>3</span><small>TRIAL</small></div>
+<div><span id="statPending">0</span><small>PENDING</small></div>
+<div><span id="statActive">0</span><small>ACTIVE</small></div>
+<div><span id="statExpired">0</span><small>EXPIRED</small></div>
+<div><span id="statTrial">0</span><small>TRIAL</small></div>
 </section>
 
 <section class="admin-section">
-<div class="section-title"><div><div class="kicker">01 / APPROVALS</div><h2>Membership approval</h2></div><span class="auth-status">ADMIN ONLY</span></div>
+<div class="section-title">
+<div><div class="kicker">01 / APPROVALS</div><h2>Membership approval</h2></div>
+<span class="auth-status">LIVE FIRESTORE DATA</span>
+</div>
 <div class="member-table">
 <div class="member-row member-head"><span>Member</span><span>Email</span><span>Verification</span><span>Status</span><span>Action</span></div>
-<div class="member-row"><span><strong>Andi Pratama</strong><small>@andi</small></span><span>andi@example.com</span><span class="ok">VERIFIED</span><span>PENDING</span><button>REVIEW</button></div>
-<div class="member-row"><span><strong>Sari Putri</strong><small>@sarip</small></span><span>sari@example.com</span><span class="ok">VERIFIED</span><span>PENDING</span><button>REVIEW</button></div>
-<div class="member-row"><span><strong>Budi Store</strong><small>@budistore</small></span><span>budi@example.com</span><span class="ok">VERIFIED</span><span class="muted">REJECTED</span><button>VIEW</button></div>
+<div id="memberRows"></div>
 </div>
+<div id="adminDataStatus" class="admin-message"></div>
 </section>
 
 <section class="admin-section">
-<div class="section-title"><div><div class="kicker">02 / USER ACCESS</div><h2>Permission matrix</h2></div></div>
+<div class="section-title">
+<div><div class="kicker">02 / USER ACCESS</div><h2>Permission matrix</h2></div>
+</div>
+<div id="noSelection" class="empty-state">Select a member above to manage their package and permissions.</div>
+
+<div id="userEditor" class="hidden">
 <div class="selected-user">
-<div><strong>Andi Pratama</strong><span>@andi · andi@example.com</span></div>
-<div class="select-wrap"><label>Package<select><option>BASIC — 30%</option><option selected>PRO — 35%</option><option>PRO + COUNSELLING — 60%</option><option>DIAMOND — 40%</option></select></label></div>
-<div class="select-wrap"><label>Access Status<select><option selected>ACTIVE</option><option>TRIAL</option><option>PENDING</option><option>EXPIRED</option><option>SUSPENDED</option></select></label></div>
+<div><strong id="selectedName">—</strong><span id="selectedMeta">—</span></div>
+<div class="select-wrap"><label>Package
+<select id="packageSelect">
+<option value="BASIC">BASIC — 30%</option>
+<option value="PRO">PRO — 35%</option>
+<option value="PRO_COUNSELLING">PRO + COUNSELLING — 60%</option>
+<option value="DIAMOND">DIAMOND — 40%</option>
+</select>
+</label></div>
+<div class="select-wrap"><label>Approval Status
+<select id="statusSelect">
+<option value="PENDING">PENDING</option>
+<option value="APPROVED">APPROVED</option>
+<option value="REJECTED">REJECTED</option>
+<option value="SUSPENDED">SUSPENDED</option>
+</select>
+</label></div>
 </div>
 
 <div class="matrix-wrap">
 <table class="permission-matrix">
 <thead><tr><th>Feature</th><th>Package Default</th><th>Member Access</th></tr></thead>
-<tbody>
-<tr><td>Product Radar</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
-<tr><td>Best Seller</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
-<tr><td>Trending 24H</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
-<tr><td>Content Factory</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
-<tr><td>Content Queue</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
-<tr><td>Analytics</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
-<tr><td>Advanced Analytics</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
-<tr><td>Prompt Editor</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
-<tr><td>Counselling</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
-</tbody>
+<tbody id="permissionRows"></tbody>
 </table>
 </div>
-<div class="admin-actions"><button class="secondary">RESET TO PACKAGE DEFAULT</button><button class="primary">SAVE PERMISSIONS</button></div>
+
+<div class="admin-actions">
+<button class="secondary" id="resetPermissions">RESET TO PACKAGE DEFAULT</button>
+<button class="primary" id="saveMember">SAVE MEMBER</button>
+</div>
+<div id="saveStatus" class="admin-message"></div>
+</div>
 </section>
 
 <section class="admin-section">
@@ -67,19 +123,338 @@
 <div class="matrix-wrap">
 <table class="permission-matrix package-matrix">
 <thead><tr><th>Feature</th><th>BASIC<br>30%</th><th>PRO<br>35%</th><th>PRO + COUNSELLING<br>60%</th><th>DIAMOND<br>40%</th></tr></thead>
-<tbody>
-<tr><td>Product Radar</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
-<tr><td>Best Seller</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
-<tr><td>Trending 24H</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
-<tr><td>Content Factory</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
-<tr><td>Analytics</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
-<tr><td>Advanced Analytics</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
-<tr><td>Prompt Editor</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
-<tr><td>Counselling</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
-</tbody>
+<tbody id="packageMatrix"></tbody>
 </table>
 </div>
 </section>
+</div>
+
+<a class="back" href="/shop/affiliator/">← Affiliate OS</a>
 </main>
+
+<script type="module">
+import { auth, db } from "../firebase-config.js";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  setPersistence,
+  browserLocalPersistence,
+  reload
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const PACKAGE_DEFAULTS = {
+  BASIC: {
+    productRadar:true, contentFactory:true, analytics:false,
+    advancedAnalytics:false, counselling:false, affiliateTools:true, adminTools:false
+  },
+  PRO: {
+    productRadar:true, contentFactory:true, analytics:false,
+    advancedAnalytics:false, counselling:false, affiliateTools:true, adminTools:false
+  },
+  PRO_COUNSELLING: {
+    productRadar:true, contentFactory:true, analytics:false,
+    advancedAnalytics:false, counselling:true, affiliateTools:true, adminTools:false
+  },
+  DIAMOND: {
+    productRadar:true, contentFactory:true, analytics:true,
+    advancedAnalytics:true, counselling:false, affiliateTools:true, adminTools:false
+  }
+};
+
+const FEATURE_LABELS = {
+  productRadar:"Product Radar",
+  contentFactory:"Content Factory",
+  analytics:"Analytics",
+  advancedAnalytics:"Advanced Analytics",
+  counselling:"Counselling",
+  affiliateTools:"Affiliate Tools",
+  adminTools:"Admin Tools"
+};
+
+const adminGate=document.getElementById("adminGate");
+const adminApp=document.getElementById("adminApp");
+const loginForm=document.getElementById("adminLoginForm");
+const loginButton=document.getElementById("adminLoginButton");
+const loginStatus=document.getElementById("adminLoginStatus");
+const gateMessage=document.getElementById("gateMessage");
+const memberRows=document.getElementById("memberRows");
+const dataStatus=document.getElementById("adminDataStatus");
+const editor=document.getElementById("userEditor");
+const noSelection=document.getElementById("noSelection");
+const selectedName=document.getElementById("selectedName");
+const selectedMeta=document.getElementById("selectedMeta");
+const packageSelect=document.getElementById("packageSelect");
+const statusSelect=document.getElementById("statusSelect");
+const permissionRows=document.getElementById("permissionRows");
+const saveStatus=document.getElementById("saveStatus");
+const state={users:[],permissions:new Map(),selectedUid:null};
+
+function packageLabel(value){
+  return ({BASIC:"BASIC — 30%",PRO:"PRO — 35%",PRO_COUNSELLING:"PRO + COUNSELLING — 60%",DIAMOND:"DIAMOND — 40%"})[value] || "—";
+}
+
+function isTrial(data){
+  if(!data.trialEndsAt) return false;
+  const end=data.trialEndsAt.toDate ? data.trialEndsAt.toDate() : new Date(data.trialEndsAt);
+  return end.getTime() >= Date.now() && data.approvalStatus==="APPROVED";
+}
+
+function isExpired(data){
+  if(!data.membershipExpiresAt) return false;
+  const end=data.membershipExpiresAt.toDate ? data.membershipExpiresAt.toDate() : new Date(data.membershipExpiresAt);
+  return end.getTime() < Date.now();
+}
+
+function statusLabel(data){
+  if(isExpired(data)) return "EXPIRED";
+  return data.approvalStatus || "PENDING";
+}
+
+function friendlyError(error){
+  const map={
+    "auth/invalid-credential":"Email atau password admin salah.",
+    "auth/invalid-email":"Format email tidak valid.",
+    "auth/too-many-requests":"Terlalu banyak percobaan login. Coba lagi.",
+    "auth/network-request-failed":"Koneksi bermasalah. Coba lagi."
+  };
+  return map[error?.code] || error?.message || "Login admin gagal.";
+}
+
+function renderPackageMatrix(){
+  const keys=Object.keys(FEATURE_LABELS);
+  document.getElementById("packageMatrix").innerHTML=keys.map(key=>{
+    const cells=["BASIC","PRO","PRO_COUNSELLING","DIAMOND"].map(pkg=>PACKAGE_DEFAULTS[pkg][key]?"✓":"—");
+    return "<tr><td>"+FEATURE_LABELS[key]+"</td>"+cells.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
+  }).join("");
+}
+
+function renderMembers(){
+  const sorted=[...state.users].sort((a,b)=>{
+    const rank={PENDING:0,APPROVED:1,REJECTED:2,SUSPENDED:3,EXPIRED:4};
+    return (rank[statusLabel(a.data)]??9)-(rank[statusLabel(b.data)]??9);
+  });
+
+  if(!sorted.length){
+    memberRows.innerHTML='<div class="empty-state">No member profiles found.</div>';
+    return;
+  }
+
+  memberRows.innerHTML=sorted.map(item=>{
+    const d=item.data;
+    const selected=item.uid===state.selectedUid?" selected":"";
+    const verification=d.emailVerified?"VERIFIED":"UNVERIFIED";
+    return '<div class="member-row'+selected+'">'+
+      '<span><strong>'+escapeHtml(d.fullName||"Unnamed")+'</strong><small>@'+escapeHtml(d.username||"—")+'</small></span>'+
+      '<span>'+escapeHtml(d.email||"—")+'</span>'+
+      '<span class="'+(d.emailVerified?"ok":"muted")+'">'+verification+'</span>'+
+      '<span>'+statusLabel(d)+'</span>'+
+      '<span><button data-select="'+item.uid+'">REVIEW</button></span>'+
+    '</div>';
+  }).join("");
+
+  memberRows.querySelectorAll("[data-select]").forEach(btn=>{
+    btn.addEventListener("click",()=>selectUser(btn.dataset.select));
+  });
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+}
+
+function renderStats(){
+  document.getElementById("statPending").textContent=state.users.filter(x=>x.data.approvalStatus==="PENDING").length;
+  document.getElementById("statActive").textContent=state.users.filter(x=>x.data.approvalStatus==="APPROVED"&&!isExpired(x.data)).length;
+  document.getElementById("statExpired").textContent=state.users.filter(x=>isExpired(x.data)).length;
+  document.getElementById("statTrial").textContent=state.users.filter(x=>isTrial(x.data)).length;
+}
+
+function renderPermissions(values){
+  const pkg=packageSelect.value;
+  const defaults=PACKAGE_DEFAULTS[pkg];
+  permissionRows.innerHTML=Object.keys(FEATURE_LABELS).map(key=>{
+    const checked=values[key]===true;
+    return '<tr><td>'+FEATURE_LABELS[key]+'</td><td>'+(defaults[key]?"✓":"—")+'</td>'+
+      '<td><label class="check"><input type="checkbox" data-permission="'+key+'" '+(checked?"checked":"")+'><span></span></label></td></tr>';
+  }).join("");
+}
+
+function getPermissionValues(){
+  const values={};
+  permissionRows.querySelectorAll("[data-permission]").forEach(input=>{
+    values[input.dataset.permission]=input.checked;
+  });
+  return values;
+}
+
+async function selectUser(uid){
+  state.selectedUid=uid;
+  const item=state.users.find(x=>x.uid===uid);
+  if(!item) return;
+  const d=item.data;
+  noSelection.classList.add("hidden");
+  editor.classList.remove("hidden");
+  selectedName.textContent=d.fullName||"Unnamed";
+  selectedMeta.textContent="@"+(d.username||"—")+" · "+(d.email||"—");
+  packageSelect.value=d.package||"BASIC";
+  statusSelect.value=["PENDING","APPROVED","REJECTED","SUSPENDED"].includes(d.approvalStatus)?d.approvalStatus:"PENDING";
+  renderPermissions(state.permissions.get(uid)||PACKAGE_DEFAULTS[packageSelect.value]);
+  renderMembers();
+  saveStatus.textContent="";
+}
+
+packageSelect.addEventListener("change",()=>{
+  const current=getPermissionValues();
+  renderPermissions(current);
+});
+
+document.getElementById("resetPermissions").addEventListener("click",()=>{
+  renderPermissions(PACKAGE_DEFAULTS[packageSelect.value]);
+  saveStatus.textContent="Permission preview reset to package defaults. Click SAVE MEMBER to apply.";
+});
+
+document.getElementById("saveMember").addEventListener("click",async()=>{
+  if(!state.selectedUid) return;
+  const item=state.users.find(x=>x.uid===state.selectedUid);
+  if(!item) return;
+
+  const packageValue=packageSelect.value;
+  const approvalStatus=statusSelect.value;
+  if(approvalStatus==="APPROVED" && !packageValue){
+    saveStatus.textContent="Approved members must have a package.";
+    saveStatus.classList.add("admin-error");
+    return;
+  }
+
+  const button=document.getElementById("saveMember");
+  button.disabled=true;
+  button.textContent="SAVING...";
+  saveStatus.classList.remove("admin-error");
+
+  try{
+    const userRef=doc(db,"users",state.selectedUid);
+    const permissionRef=doc(db,"userPermissions",state.selectedUid);
+    const current=item.data;
+    const updates={
+      approvalStatus,
+      package:approvalStatus==="APPROVED"?packageValue:(current.package||null),
+      updatedAt:serverTimestamp()
+    };
+
+    if(approvalStatus==="APPROVED"){
+      if(!current.membershipStartedAt) updates.membershipStartedAt=serverTimestamp();
+      if(!current.trialStartedAt) updates.trialStartedAt=serverTimestamp();
+      if(!current.trialEndsAt) updates.trialEndsAt=Timestamp.fromMillis(Date.now()+30*24*60*60*1000);
+    }
+
+    await updateDoc(userRef,updates);
+    await updateDoc(permissionRef,getPermissionValues());
+
+    saveStatus.textContent="Member saved successfully.";
+    await loadMembers(state.selectedUid);
+  }catch(error){
+    saveStatus.textContent=error?.message||"Save failed.";
+    saveStatus.classList.add("admin-error");
+  }finally{
+    button.disabled=false;
+    button.textContent="SAVE MEMBER";
+  }
+});
+
+async function loadMembers(preselectUid=null){
+  dataStatus.textContent="Loading live member data...";
+  const [usersSnap,permissionsSnap]=await Promise.all([
+    getDocs(collection(db,"users")),
+    getDocs(collection(db,"userPermissions"))
+  ]);
+
+  state.users=usersSnap.docs.map(s=>({uid:s.id,data:s.data()}));
+  state.permissions=new Map(permissionsSnap.docs.map(s=>[s.id,s.data()]));
+  renderStats();
+  renderMembers();
+
+  const uid=preselectUid || state.selectedUid;
+  if(uid && state.users.some(x=>x.uid===uid)) await selectUser(uid);
+  else {
+    state.selectedUid=null;
+    editor.classList.add("hidden");
+    noSelection.classList.remove("hidden");
+  }
+
+  dataStatus.textContent="Live data loaded from Firestore.";
+}
+
+async function checkAdmin(user){
+  if(!user) return false;
+  await reload(user);
+  const snap=await getDoc(doc(db,"users",user.uid));
+  return snap.exists() && snap.data().role==="ADMIN";
+}
+
+loginForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  loginButton.disabled=true;
+  loginButton.textContent="CHECKING...";
+  loginStatus.textContent="Authenticating...";
+  try{
+    await signInWithEmailAndPassword(auth,
+      document.getElementById("adminEmail").value.trim().toLowerCase(),
+      document.getElementById("adminPassword").value
+    );
+  }catch(error){
+    loginStatus.textContent=friendlyError(error);
+    loginButton.disabled=false;
+    loginButton.textContent="LOGIN AS ADMIN";
+  }
+});
+
+document.getElementById("adminLogout").addEventListener("click",async()=>{
+  await signOut(auth);
+});
+
+setPersistence(auth,browserLocalPersistence).catch(console.error);
+
+onAuthStateChanged(auth,async user=>{
+  if(!user){
+    adminGate.classList.remove("hidden");
+    adminApp.classList.add("hidden");
+    return;
+  }
+
+  try{
+    const allowed=await checkAdmin(user);
+    if(!allowed){
+      await signOut(auth);
+      gateMessage.textContent="This account is not an ADMIN account.";
+      loginStatus.textContent="Access denied. Admin role is required.";
+      return;
+    }
+
+    adminGate.classList.add("hidden");
+    adminApp.classList.remove("hidden");
+    document.getElementById("adminIdentity").textContent=user.displayName||"Administrator";
+    document.getElementById("adminIdentityEmail").textContent=user.email||"";
+    loginStatus.textContent="";
+    loginButton.disabled=false;
+    loginButton.textContent="LOGIN AS ADMIN";
+    await loadMembers();
+  }catch(error){
+    adminApp.classList.add("hidden");
+    adminGate.classList.remove("hidden");
+    loginStatus.textContent=error?.message||"Unable to verify admin access.";
+  }
+});
+
+renderPackageMatrix();
+</script>
 </body>
 </html>
