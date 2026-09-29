@@ -314,15 +314,31 @@ async function prepareFlow(flowTab, compiledPrompt) {
 }
 
 
-async function clickFlowGenerate(flowTabId) {
-  await chrome.debugger.attach({ tabId: flowTabId }, "1.3");
+async function generateAndDownloadOne(flowTab) {
+  const downloadStartedAt = Date.now();
+
+  await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
-    const clicked = await evaluate(flowTabId, `(() => {
+    const generationStart = await evaluate(flowTab.id, `(() => {
+      const videos = Array.from(document.querySelectorAll("video")).filter(video => {
+        const r = video.getBoundingClientRect();
+        return r.width > 120 && r.height > 80;
+      });
+
+      return {
+        videoCount: videos.length,
+        sources: videos.map(video => video.currentSrc || video.src || "")
+      };
+    })()`);
+
+    const clicked = await evaluate(flowTab.id, `(() => {
       const nodes = Array.from(document.querySelectorAll('button, [role="button"]'));
       const visible = nodes.filter(node => {
         const r = node.getBoundingClientRect();
-        return r.width > 0 && r.height > 0 && !node.disabled && node.getAttribute("aria-disabled") !== "true";
+        return r.width > 0 && r.height > 0 &&
+          !node.disabled &&
+          node.getAttribute("aria-disabled") !== "true";
       });
 
       const scored = visible.map(node => {
@@ -341,101 +357,130 @@ async function clickFlowGenerate(flowTabId) {
       }).sort((a, b) => b.score - a.score);
 
       const target = scored.find(item => item.score >= 50);
-      if (!target) return { ok: false, candidates: scored.slice(0, 12).map(x => x.label) };
+      if (!target) {
+        return {
+          ok: false,
+          candidates: scored.slice(0, 15).map(x => x.label)
+        };
+      }
 
       target.node.click();
       return { ok: true, label: target.label };
     })()`);
 
     if (!clicked || !clicked.ok) {
-      throw new Error("Google Flow Generate button was not found. Candidates: " + JSON.stringify(clicked && clicked.candidates || []));
+      throw new Error(
+        "Google Flow Generate button was not found. Candidates: " +
+        JSON.stringify(clicked && clicked.candidates || [])
+      );
     }
 
-    return clicked;
-  } finally {
-    await chrome.debugger.detach({ tabId: flowTabId }).catch(() => {});
-  }
-}
+    const generationWaitStarted = Date.now();
+    let lastState = null;
 
-async function clickFlowDownload(flowTabId) {
-  await chrome.debugger.attach({ tabId: flowTabId }, "1.3");
-
-  try {
-    const clicked = await evaluate(flowTabId, `(() => {
-      const nodes = Array.from(document.querySelectorAll('button, [role="button"], a'));
-      const visible = nodes.filter(node => {
-        const r = node.getBoundingClientRect();
-        return r.width > 0 && r.height > 0 && !node.disabled && node.getAttribute("aria-disabled") !== "true";
-      });
-
-      const scored = visible.map(node => {
-        const label = [
-          node.innerText || "",
-          node.getAttribute("aria-label") || "",
-          node.getAttribute("title") || "",
-          node.textContent || ""
-        ].join(" ").trim().toLowerCase();
-
-        let score = 0;
-        if (label === "download") score += 100;
-        if (label.includes("download")) score += 50;
-        return { node, label, score };
-      }).sort((a, b) => b.score - a.score);
-
-      const target = scored.find(item => item.score >= 50);
-      if (!target) return { ok: false, candidates: scored.slice(0, 20).map(x => x.label) };
-
-      target.node.click();
-      return { ok: true, label: target.label };
-    })()`);
-
-    if (!clicked || !clicked.ok) {
-      throw new Error("Google Flow Download control was not found. Candidates: " + JSON.stringify(clicked && clicked.candidates || []));
-    }
-
-    return clicked;
-  } finally {
-    await chrome.debugger.detach({ tabId: flowTabId }).catch(() => {});
-  }
-}
-
-async function waitForFlowVideo(flowTabId, timeoutMs = 600000) {
-  const started = Date.now();
-  let lastState = null;
-
-  while (Date.now() - started < timeoutMs) {
-    await chrome.debugger.attach({ tabId: flowTabId }, "1.3");
-
-    try {
-      lastState = await evaluate(flowTabId, `(() => {
+    while (Date.now() - generationWaitStarted < 600000) {
+      lastState = await evaluate(flowTab.id, `(() => {
         const videos = Array.from(document.querySelectorAll("video")).filter(video => {
           const r = video.getBoundingClientRect();
           return r.width > 120 && r.height > 80;
         });
 
-        const body = (document.body?.innerText || "").toLowerCase();
-        const readyVideo = videos.find(video => {
-          const duration = Number(video.duration || 0);
-          return Number.isFinite(duration) && duration > 0 && (video.readyState >= 2 || video.currentSrc);
+        const baselineCount = generationStart.videoCount;
+        const baselineSources = JSON.stringify(generationStart.sources || []);
+
+        const candidates = videos.map(video => ({
+          src: video.currentSrc || video.src || "",
+          duration: Number(video.duration || 0),
+          readyState: video.readyState,
+          width: video.getBoundingClientRect().width,
+          height: video.getBoundingClientRect().height
+        }));
+
+        const readyVideo = candidates.find(video => {
+          const isNew = video.src && !baselineSources.includes(video.src);
+          const isPlayable = Number.isFinite(video.duration) &&
+            video.duration > 0 &&
+            video.readyState >= 2;
+          return isPlayable && (candidates.length > baselineCount || isNew);
         });
+
+        const bodyText = (document.body?.innerText || "");
+        const lower = bodyText.toLowerCase();
 
         return {
           videoCount: videos.length,
           ready: Boolean(readyVideo),
-          duration: readyVideo ? Number(readyVideo.duration || 0) : 0,
-          bodyHasDownload: body.includes("download"),
-          bodySample: (document.body?.innerText || "").slice(-1200)
+          duration: readyVideo ? readyVideo.duration : 0,
+          source: readyVideo ? readyVideo.src : "",
+          hasDownload: lower.includes("download"),
+          bodySample: bodyText.slice(-1200),
+          candidates
         };
       })()`);
-    } finally {
-      await chrome.debugger.detach({ tabId: flowTabId }).catch(() => {});
+
+      if (lastState && lastState.ready) {
+        const downloadClicked = await evaluate(flowTab.id, `(() => {
+          const nodes = Array.from(document.querySelectorAll('button, [role="button"], a'));
+          const visible = nodes.filter(node => {
+            const r = node.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 &&
+              !node.disabled &&
+              node.getAttribute("aria-disabled") !== "true";
+          });
+
+          const scored = visible.map(node => {
+            const label = [
+              node.innerText || "",
+              node.getAttribute("aria-label") || "",
+              node.getAttribute("title") || "",
+              node.textContent || ""
+            ].join(" ").trim().toLowerCase();
+
+            let score = 0;
+            if (label === "download") score += 100;
+            if (label.includes("download")) score += 50;
+            return { node, label, score };
+          }).sort((a, b) => b.score - a.score);
+
+          const target = scored.find(item => item.score >= 50);
+          if (!target) {
+            return {
+              ok: false,
+              candidates: scored.slice(0, 20).map(x => x.label)
+            };
+          }
+
+          target.node.click();
+          return { ok: true, label: target.label };
+        })()`);
+
+        if (!downloadClicked || !downloadClicked.ok) {
+          throw new Error(
+            "Google Flow Download control was not found after video generation. Candidates: " +
+            JSON.stringify(downloadClicked && downloadClicked.candidates || [])
+          );
+        }
+
+        const file = await waitForNewDownload(downloadStartedAt);
+
+        return {
+          generated: clicked,
+          video: lastState,
+          download: downloadClicked,
+          file
+        };
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 2500));
     }
 
-    if (lastState && lastState.ready) return lastState;
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    throw new Error(
+      "Timed out waiting for Google Flow to finish generating a NEW playable video. Last state: " +
+      JSON.stringify(lastState)
+    );
+  } finally {
+    await chrome.debugger.detach({ tabId: flowTab.id }).catch(() => {});
   }
-
-  throw new Error("Timed out waiting for Google Flow to finish generating a playable video. Last state: " + JSON.stringify(lastState));
 }
 
 async function waitForNewDownload(startTimeMs, timeoutMs = 120000) {
