@@ -401,79 +401,69 @@ async function testFlowDirectInput() {
       const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled;};
       const nodes=Array.from(document.querySelectorAll('button,[role="button"],a')).filter(visible);
       const el=nodes.find(n=>/^Scenes$/i.test([n.innerText||"",n.getAttribute("aria-label")||"",n.getAttribute("title")||""].join(" ").trim()));
-      if(!el)return {found:false};
-      const r=el.getBoundingClientRect();return {found:true,x:r.left+r.width/2,y:r.top+r.height/2};
+      if(!el)return {found:false};const r=el.getBoundingClientRect();return {found:true,x:r.left+r.width/2,y:r.top+r.height/2};
     })()`);
+
     if(scene?.found){
       await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:scene.x,y:scene.y});
       await new Promise(r=>setTimeout(r,75));
       await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:scene.x,y:scene.y,button:"left",clickCount:1});
       await new Promise(r=>setTimeout(r,50));
       await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:scene.x,y:scene.y,button:"left",clickCount:1});
-      await new Promise(r=>setTimeout(r,700));
+      await new Promise(r=>setTimeout(r,900));
     }
 
-    // Current Flow Agent composer can expose the prompt as a generic element
-    // rather than a Slate editor. Find the visible "What do you want to create?"
-    // surface first, then fall back to normal editors.
-    const target = await evaluate(flowTab.id,`(() => {
+    // Agentic Flow uses a Slate contenteditable inside the prompt textbox.
+    const target=await evaluate(flowTab.id,`(() => {
       const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";};
-      const all=Array.from(document.querySelectorAll('*')).filter(visible);
-      const placeholder=all.find(el => {
-        const t=(el.innerText||"").trim();
-        return t === "What do you want to create?";
+      const candidates=Array.from(document.querySelectorAll('[role="textbox"][contenteditable="true"],[data-slate-editor="true"][contenteditable="true"]')).filter(visible);
+      const exact=candidates.find(el=>{
+        const t=(el.innerText||el.textContent||"").trim();
+        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
+        return /What do you want to create\?/i.test(t+" "+p) || el.closest('[role="textbox"]');
       });
-      const editors=Array.from(document.querySelectorAll('[contenteditable="true"],textarea,input[type="text"],[role="textbox"],[data-slate-editor="true"]')).filter(visible);
-      const candidate=editors[editors.length-1] || placeholder;
-      if(!candidate)return {ok:false,reason:"No Flow composer/editor or Agent placeholder found"};
-      const r=candidate.getBoundingClientRect();
+      const el=exact||candidates[candidates.length-1];
+      if(!el)return {ok:false,reason:"Agentic contenteditable textbox not found",candidateCount:candidates.length};
+      const r=el.getBoundingClientRect();
+      const host=el.closest('[role="textbox"]');
+      const hr=host?.getBoundingClientRect();
       return {
         ok:true,
-        source:editors.length?"editor":"agent-placeholder",
-        tag:candidate.tagName,
-        role:candidate.getAttribute("role")||"",
-        contenteditable:candidate.getAttribute("contenteditable")||"",
-        placeholder:candidate.getAttribute("placeholder")||candidate.getAttribute("data-placeholder")||"",
-        text:(candidate.innerText||candidate.textContent||candidate.value||"").slice(0,200),
-        x:r.left+Math.min(r.width/2,300),
-        y:r.top+Math.min(r.height/2,30),
-        rect:{left:r.left,top:r.top,width:r.width,height:r.height}
+        tag:el.tagName,
+        role:el.getAttribute("role")||"",
+        contenteditable:el.getAttribute("contenteditable")||"",
+        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
+        text:(el.innerText||el.textContent||"").slice(0,200),
+        x:(hr||r).left+Math.min((hr||r).width/2,300),
+        y:(hr||r).top+Math.min((hr||r).height/2,30)
       };
     })()`);
 
     if(!target?.ok)return {ok:false,scene,target};
 
-    // Click the target surface.
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:target.x,y:target.y});
     await new Promise(r=>setTimeout(r,100));
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:target.x,y:target.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,50));
+    await new Promise(r=>setTimeout(r,60));
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:target.x,y:target.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,250));
+    await new Promise(r=>setTimeout(r,300));
 
-    const text="DICIDY DIRECT FLOW TEST — THIS TEXT MUST APPEAR";
-    await sendCommand(flowTab.id,"Input.insertText",{text});
-    await new Promise(r=>setTimeout(r,500));
-
-    // If insertText did not work, use a trusted key sequence as fallback.
-    let verify=await evaluate(flowTab.id,`(() => {
-      const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"],[role="textbox"]'));
-      return {found:nodes.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:nodes.slice(-8).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("placeholder")||el.getAttribute("data-placeholder")||""}))};
-    })()`);
-
-    if(!verify?.found){
-      for(const ch of text){
-        if(ch===" "){await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyDown",windowsVirtualKeyCode:32,key:" "});await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyUp",windowsVirtualKeyCode:32,key:" "});}
-        else {
-          await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"char",text:ch,key:ch});
-        }
-      }
-      await new Promise(r=>setTimeout(r,500));
-      verify=await evaluate(flowTab.id,`(() => {
-        const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"],[role="textbox"]'));
-        return {found:nodes.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:nodes.slice(-8).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("placeholder")||el.getAttribute("data-placeholder")||""}))};
-      })()`);
+    const text="DICIDY DIRECT FLOW TEST";
+    // Browser-like keyboard typing: keyDown -> char -> keyUp.
+    for(const ch of text){
+      const code=ch===" " ? "Space" : (ch.length===1 ? "Key"+ch.toUpperCase() : ch);
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyDown",key:ch===" "?" ":ch,code,windowsVirtualKeyCode:ch===" "?32:ch.toUpperCase().charCodeAt(0),text:"",unmodifiedText:""});
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"char",key:ch===" "?" ":ch,text:ch,unmodifiedText:ch});
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyUp",key:ch===" "?" ":ch,code});
+      await new Promise(r=>setTimeout(r,8));
     }
+    await new Promise(r=>setTimeout(r,600));
+
+    const verify=await evaluate(flowTab.id,`(() => {
+      const nodes=Array.from(document.querySelectorAll('[role="textbox"][contenteditable="true"],[data-slate-editor="true"],[contenteditable="true"]'));
+      const vals=nodes.map(el=>({tag:el.tagName,role:el.getAttribute("role")||"",text:(el.innerText||el.textContent||"").slice(0,300)}));
+      return {found:vals.some(v=>v.text.includes("DICIDY DIRECT FLOW TEST")),values:vals.slice(-8)};
+    })()`);
 
     return {ok:Boolean(verify?.found),scene,target,verify};
   } finally {
