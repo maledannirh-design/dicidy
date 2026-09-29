@@ -11,12 +11,36 @@
 .radar-title{padding:52px 0 30px}
 .radar-title .kicker{margin-bottom:12px}
 .radar-title h1{font-size:clamp(42px,6vw,72px)}
-.radar-title p{color:var(--muted);max-width:680px;line-height:1.7;margin:16px 0 0}
+.radar-title p{color:var(--muted);max-width:720px;line-height:1.7;margin:16px 0 0}
 .radar-search{width:100%;border:1px solid var(--line);background:#0d0d0d;color:var(--text);padding:16px 18px;font-size:14px;outline:none}
 .radar-search:focus{border-color:rgba(255,255,255,.45)}
-.radar-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}
-.radar-filter{border:1px solid var(--line);background:#0d0d0d;color:#bbb;padding:10px 14px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
-.radar-filter.active,.radar-filter:hover{color:#f4efe7;border-color:rgba(255,255,255,.5);background:#151515}
+.filter-layout{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.7fr);gap:14px;margin:14px 0 20px}
+.filter-card{border:1px solid var(--line);background:linear-gradient(145deg,#141414,#0c0c0c);padding:20px}
+.filter-card.premium{border-color:rgba(217,180,124,.28);background:linear-gradient(145deg,#17130e,#0c0c0c)}
+.filter-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+.filter-title{font-family:Georgia,serif;font-size:24px;font-weight:400}
+.filter-description{color:#777;font-size:11px;line-height:1.55;margin-top:5px}
+.filter-badge{font-size:8px;letter-spacing:.14em;text-transform:uppercase;padding:7px 9px;border:1px solid var(--line);color:#888;white-space:nowrap}
+.premium .filter-badge{color:#d9b47c;border-color:rgba(217,180,124,.35)}
+.filter-controls{display:flex;gap:9px;flex-wrap:wrap}
+.filter-select,.filter-btn{border:1px solid var(--line);background:#0d0d0d;color:#ddd;padding:11px 13px;font-size:10px;letter-spacing:.11em;text-transform:uppercase;cursor:pointer}
+.filter-select{min-width:190px;outline:none}
+.filter-btn:hover,.filter-select:hover{border-color:rgba(255,255,255,.5);background:#151515}
+.filter-btn.active{background:#eee;color:#111;border-color:#eee}
+.sort-btn{min-width:142px}
+.reset-btn{color:#888}
+.intelligence-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.intel-btn{position:relative;min-height:58px;text-align:left;padding:11px 12px 10px 14px;border:1px solid rgba(217,180,124,.2);background:#0d0d0d;color:#ddd;cursor:pointer;transition:.18s}
+.intel-btn:hover{border-color:rgba(217,180,124,.55);background:#15120e}
+.intel-btn.active{border-color:#d9b47c;background:linear-gradient(145deg,#211a11,#0f0e0c);box-shadow:inset 0 0 0 1px rgba(217,180,124,.12)}
+.intel-btn.locked{cursor:not-allowed;opacity:.62}
+.intel-name{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.intel-state{display:block;color:#777;font-size:8px;letter-spacing:.1em;margin-top:6px}
+.lock-icon{position:absolute;right:10px;top:9px;font-size:11px;color:#d9b47c}
+.filter-summary{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 18px}
+.filter-summary-label{color:#666;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+.filter-chip{border:1px solid rgba(255,255,255,.14);padding:7px 9px;color:#bbb;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:#0d0d0d}
+.filter-chip.premium-chip{border-color:rgba(217,180,124,.3);color:#d9b47c}
 .radar-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
 .radar-stat{border:1px solid var(--line);padding:18px;background:linear-gradient(145deg,#141414,#0d0d0d)}
 .radar-stat span{display:block;color:#777;font-size:9px;letter-spacing:.18em;text-transform:uppercase}
@@ -46,6 +70,8 @@
 .access-gate .gate-status{display:inline-block;margin-top:18px;border:1px solid var(--line);padding:10px 14px;color:#ddd;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
 .radar-content{display:none}
 @media(max-width:1000px){
+.filter-layout{grid-template-columns:1fr}
+.intelligence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .radar-table-head{display:none}
 .radar-row{grid-template-columns:34px 1fr 90px;padding:16px}
 .radar-row>div:nth-child(3),.radar-row>div:nth-child(4),.radar-row>div:nth-child(5),.radar-row>div:nth-child(6){display:none}
@@ -57,6 +83,13 @@
 .radar-header{align-items:flex-start}
 .radar-header .tagline{display:none}
 .radar-title{padding:42px 0 24px}
+.filter-card{padding:16px}
+.filter-head{margin-bottom:14px}
+.filter-title{font-size:21px}
+.filter-controls{display:grid;grid-template-columns:1fr 1fr}
+.filter-select,.filter-btn{width:100%;min-width:0}
+.intelligence-grid{grid-template-columns:1fr 1fr}
+.intel-btn{min-height:62px}
 .radar-summary{gap:8px}
 .radar-stat{padding:14px}
 .radar-stat strong{font-size:24px}
@@ -78,7 +111,7 @@
 <section class="radar-title">
 <div class="kicker">SHOP / AFFILIATOR / RADAR</div>
 <h1>PRODUCT RADAR.</h1>
-<p>Find products worth creating content for. Start with the strongest opportunities, then move selected products into the content queue.</p>
+<p>Find products worth creating content for. Combine general filters with intelligence signals, then move selected products into the content queue.</p>
 </section>
 
 <section id="accessGate" class="access-gate">
@@ -89,70 +122,66 @@
 </section>
 
 <section id="radarContent" class="radar-content">
-<input class="radar-search" type="search" placeholder="Search product, shop, category..." aria-label="Search products">
+<input id="productSearch" class="radar-search" type="search" placeholder="Search product, shop, category..." aria-label="Search products">
 
-<div class="radar-filters">
-<button class="radar-filter active">Trending 24H</button>
-<button class="radar-filter">High Commission</button>
-<button class="radar-filter">Best Seller</button>
-<button class="radar-filter">New</button>
-<button class="radar-filter">Beauty</button>
-<button class="radar-filter">Fashion</button>
-<button class="radar-filter">Household</button>
-<button class="radar-filter">All</button>
+<section class="filter-layout" aria-label="Product Radar filters">
+<div class="filter-card">
+<div class="filter-head">
+<div><div class="filter-title">General Filter</div><div class="filter-description">Basic catalog controls. These are available to every Radar member.</div></div>
+<span class="filter-badge">CORE</span>
+</div>
+<div class="filter-controls">
+<select id="categoryFilter" class="filter-select" aria-label="Category">
+<option value="all">All Categories</option>
+<option value="beauty">Beauty</option>
+<option value="fashion">Fashion</option>
+<option value="household">Household</option>
+<option value="sports">Sports</option>
+<option value="electronics">Electronics</option>
+<option value="food">Food & Beverage</option>
+</select>
+<button id="priceSort" class="filter-btn sort-btn" type="button">PRICE: OFF</button>
+<button id="resetFilters" class="filter-btn reset-btn" type="button">RESET</button>
+</div>
 </div>
 
-<section class="radar-summary">
-<div class="radar-stat"><span>Trending Products</span><strong>33</strong></div>
-<div class="radar-stat"><span>High Commission</span><strong>12</strong></div>
-<div class="radar-stat"><span>New Opportunities</span><strong>8</strong></div>
-<div class="radar-stat"><span>Content Ready</span><strong>5</strong></div>
+<div class="filter-card premium">
+<div class="filter-head">
+<div><div class="filter-title">Intelligence Filter</div><div class="filter-description">Signals built from performance and historical data. Locked signals stay visible so you know what is available in higher packages.</div></div>
+<span class="filter-badge">ADVANCED</span>
+</div>
+<div id="intelligenceGrid" class="intelligence-grid">
+<button class="intel-btn" type="button" data-signal="flashSale"><span class="intel-name">Flash Sale</span><span class="intel-state">AVAILABLE</span></button>
+<button class="intel-btn locked" type="button" data-signal="highCommission"><span class="lock-icon">⌁</span><span class="intel-name">High Commission</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="trending24h"><span class="lock-icon">⌁</span><span class="intel-name">Trending 24H</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="newProduct"><span class="lock-icon">⌁</span><span class="intel-name">New Product</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="bestSeller"><span class="lock-icon">⌁</span><span class="intel-name">Best Seller</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="rising"><span class="lock-icon">⌁</span><span class="intel-name">Rising Product</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="opportunity"><span class="lock-icon">⌁</span><span class="intel-name">Opportunity</span><span class="intel-state">LOCKED · PRO+</span></button>
+<button class="intel-btn locked" type="button" data-signal="others"><span class="lock-icon">⌁</span><span class="intel-name">And Others</span><span class="intel-state">LOCKED · PREMIUM</span></button>
+</div>
+</div>
 </section>
 
-<section class="radar-table" aria-label="Product Radar list">
+<div id="filterSummary" class="filter-summary"></div>
+
+<section class="radar-summary">
+<div class="radar-stat"><span>Matching Products</span><strong id="matchingCount">0</strong></div>
+<div class="radar-stat"><span>Trending Products</span><strong id="trendingCount">0</strong></div>
+<div class="radar-stat"><span>High Commission</span><strong id="commissionCount">0</strong></div>
+<div class="radar-stat"><span>Content Ready</span><strong id="contentReadyCount">5</strong></div>
+</section>
+
+<section id="radarTable" class="radar-table" aria-label="Product Radar list">
 <div class="radar-table-head">
-<div> </div><div>Product</div><div>Price</div><div>Commission</div><div>Sold</div><div>Score</div><div>Action</div>
+<div></div><div>Product</div><div>Price</div><div>Commission</div><div>Sold</div><div>Score</div><div>Action</div>
 </div>
-
-<div class="radar-row">
-<div><input class="radar-check" type="checkbox"></div>
-<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Mododo Tumbler 500ml</div><div class="product-shop">Mododo Official Store</div></div></div>
-<div class="radar-muted">Rp49.000</div><div class="radar-muted">11.5%</div><div class="radar-muted">12.4K</div><div><span class="radar-score">92</span><div class="hot">HOT</div></div>
-<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
-</div>
-
-<div class="radar-row">
-<div><input class="radar-check" type="checkbox"></div>
-<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Women's Everyday Bag</div><div class="product-shop">Fashion Store</div></div></div>
-<div class="radar-muted">Rp16.500</div><div class="radar-muted">13.5%</div><div class="radar-muted">8.7K</div><div><span class="radar-score">88</span><div class="hot">HOT</div></div>
-<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
-</div>
-
-<div class="radar-row">
-<div><input class="radar-check" type="checkbox"></div>
-<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Scarlet Perfume</div><div class="product-shop">Beauty Store</div></div></div>
-<div class="radar-muted">Rp12.999</div><div class="radar-muted">20.0%</div><div class="radar-muted">21.3K</div><div><span class="radar-score">86</span><div class="hot">HOT</div></div>
-<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
-</div>
-
-<div class="radar-row">
-<div><input class="radar-check" type="checkbox"></div>
-<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Classic Straight Jeans</div><div class="product-shop">Denim Official</div></div></div>
-<div class="radar-muted">Rp56.420</div><div class="radar-muted">14.5%</div><div class="radar-muted">6.2K</div><div><span class="radar-score">82</span><div class="hot">RISING</div></div>
-<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
-</div>
-
-<div class="radar-row">
-<div><input class="radar-check" type="checkbox"></div>
-<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Everyday Walking Shoes</div><div class="product-shop">Comfort Footwear</div></div></div>
-<div class="radar-muted">Rp85.000</div><div class="radar-muted">21.5%</div><div class="radar-muted">4.9K</div><div><span class="radar-score">79</span><div class="hot">RISING</div></div>
-<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
-</div>
+<div id="radarRows"></div>
 </section>
 
 <div class="radar-footer">
 <a href="/shop/affiliator/">← Affiliate OS</a>
-<span>V1 · SAMPLE DATA</span>
+<span>V1 · SAMPLE DATA · FILTER LOGIC ACTIVE</span>
 <a href="/shop/">Shop</a>
 </div>
 </section>
@@ -160,101 +189,196 @@
 
 <script type="module">
 import { auth, db } from "../firebase-config.js";
-import {
-  onAuthStateChanged,
-  reload
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { onAuthStateChanged, reload } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const gate = document.getElementById("accessGate");
 const gateTitle = document.getElementById("gateTitle");
 const gateMessage = document.getElementById("gateMessage");
 const gateStatus = document.getElementById("gateStatus");
 const content = document.getElementById("radarContent");
+const productSearch = document.getElementById("productSearch");
+const categoryFilter = document.getElementById("categoryFilter");
+const priceSort = document.getElementById("priceSort");
+const resetFilters = document.getElementById("resetFilters");
+const intelligenceGrid = document.getElementById("intelligenceGrid");
+const filterSummary = document.getElementById("filterSummary");
+const rows = document.getElementById("radarRows");
+const matchingCount = document.getElementById("matchingCount");
+const trendingCount = document.getElementById("trendingCount");
+const commissionCount = document.getElementById("commissionCount");
 
-function deny(title, message, status) {
-  gateTitle.textContent = title;
-  gateMessage.textContent = message;
-  gateStatus.textContent = status;
-  gate.style.display = "block";
-  content.style.display = "none";
+const products = [
+  {id:1,name:"Mododo Tumbler 500ml",shop:"Mododo Official Store",category:"household",sub:"Kitchen",price:49000,commission:11.5,sold:12400,score:92,signals:["trending24h","highCommission"],tag:"HOT"},
+  {id:2,name:"Women's Everyday Bag",shop:"Fashion Store",category:"fashion",sub:"Bags",price:16500,commission:13.5,sold:8700,score:88,signals:["rising","newProduct"],tag:"RISING"},
+  {id:3,name:"Scarlet Perfume",shop:"Beauty Store",category:"beauty",sub:"Perfume",price:12999,commission:20,sold:21300,score:86,signals:["bestSeller","highCommission"],tag:"HOT"},
+  {id:4,name:"Classic Straight Jeans",shop:"Denim Official",category:"fashion",sub:"Jeans",price:56420,commission:14.5,sold:6200,score:82,signals:["rising","opportunity"],tag:"RISING"},
+  {id:5,name:"Everyday Walking Shoes",shop:"Comfort Footwear",category:"sports",sub:"Tennis",price:85000,commission:21.5,sold:4900,score:79,signals:["opportunity","highCommission"],tag:"RISING"},
+  {id:6,name:"Tennis Overgrip 3-Pack",shop:"Court Gear",category:"sports",sub:"Tennis",price:39000,commission:18.5,sold:3100,score:84,signals:["trending24h","rising","opportunity"],tag:"RISING"},
+  {id:7,name:"Portable Blender",shop:"Home Daily",category:"electronics",sub:"Kitchen",price:99000,commission:16,sold:5400,score:76,signals:["newProduct","opportunity"],tag:"NEW"},
+  {id:8,name:"Protein Snack Box",shop:"Fit Market",category:"food",sub:"Sports Nutrition",price:72000,commission:12,sold:2900,score:74,signals:["flashSale","newProduct"],tag:"FLASH"}
+];
+
+let category = "all";
+let priceMode = "off";
+let selectedSignals = new Set();
+const lockedSignals = new Set(["highCommission","trending24h","newProduct","bestSeller","rising","opportunity","others"]);
+
+function deny(title,message,status){
+  gateTitle.textContent=title;
+  gateMessage.textContent=message;
+  gateStatus.textContent=status;
+  gate.style.display="block";
+  content.style.display="none";
+}
+function allow(){gate.style.display="none";content.style.display="block";}
+
+function money(value){return "Rp"+value.toLocaleString("id-ID");}
+
+function signalLabel(key){
+  return ({
+    flashSale:"Flash Sale",
+    highCommission:"High Commission",
+    trending24h:"Trending 24H",
+    newProduct:"New Product",
+    bestSeller:"Best Seller",
+    rising:"Rising Product",
+    opportunity:"Opportunity",
+    others:"And Others"
+  })[key] || key;
 }
 
-function allow() {
-  gate.style.display = "none";
-  content.style.display = "block";
+function getFilteredProducts(){
+  const query=productSearch.value.trim().toLowerCase();
+  let result=products.filter(p=>{
+    const matchesSearch=!query || [p.name,p.shop,p.category,p.sub].some(v=>v.toLowerCase().includes(query));
+    const matchesCategory=category==="all" || p.category===category;
+    const matchesSignals=[...selectedSignals].every(signal=>p.signals.includes(signal));
+    return matchesSearch && matchesCategory && matchesSignals;
+  });
+  if(priceMode==="low") result.sort((a,b)=>a.price-b.price);
+  if(priceMode==="high") result.sort((a,b)=>b.price-a.price);
+  return result;
 }
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    deny(
-      "Login required.",
-      "Please login through Affiliate OS before opening Product Radar.",
-      "LOGIN REQUIRED"
-    );
+function renderSummary(result){
+  matchingCount.textContent=result.length;
+  trendingCount.textContent=result.filter(p=>p.signals.includes("trending24h")).length;
+  commissionCount.textContent=result.filter(p=>p.signals.includes("highCommission")).length;
+}
+
+function renderChips(){
+  const chips=[];
+  if(category!=="all") chips.push("<span class="filter-chip">"+category+"</span>");
+  if(priceMode==="low") chips.push("<span class="filter-chip">Price: Low → High</span>");
+  if(priceMode==="high") chips.push("<span class="filter-chip">Price: High → Low</span>");
+  selectedSignals.forEach(s=>chips.push("<span class="filter-chip premium-chip">"+signalLabel(s)+"</span>"));
+  filterSummary.innerHTML=chips.length
+    ? "<span class="filter-summary-label">Active filters</span>"+chips.join("")
+    : "<span class="filter-summary-label">Active filters</span><span class="filter-chip">None</span>";
+}
+
+function renderRows(){
+  const result=getFilteredProducts();
+  renderSummary(result);
+  renderChips();
+  rows.innerHTML=result.length ? result.map(p=>`
+    <div class="radar-row">
+      <div><input class="radar-check" type="checkbox"></div>
+      <div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">${p.name}</div><div class="product-shop">${p.shop} · ${p.category} / ${p.sub}</div></div></div>
+      <div class="radar-muted">${money(p.price)}</div>
+      <div class="radar-muted">${p.commission.toFixed(1)}%</div>
+      <div class="radar-muted">${p.sold.toLocaleString("id-ID")}</div>
+      <div><span class="radar-score">${p.score}</span><div class="hot">${p.tag}</div></div>
+      <div class="radar-actions"><button class="radar-btn" type="button">View</button><button class="radar-btn" type="button">+ Queue</button></div>
+    </div>
+  `).join("") : `
+    <div style="padding:34px;color:#777;text-align:center;font-size:11px;letter-spacing:.12em;text-transform:uppercase">
+      No sample products match the current filter combination.
+    </div>`;
+}
+
+function cyclePrice(){
+  if(priceMode==="off") priceMode="low";
+  else if(priceMode==="low") priceMode="high";
+  else priceMode="off";
+  priceSort.textContent=priceMode==="off" ? "PRICE: OFF" : priceMode==="low" ? "PRICE: LOW → HIGH" : "PRICE: HIGH → LOW";
+  renderRows();
+}
+
+categoryFilter.addEventListener("change",()=>{category=categoryFilter.value;renderRows();});
+priceSort.addEventListener("click",cyclePrice);
+productSearch.addEventListener("input",renderRows);
+
+resetFilters.addEventListener("click",()=>{
+  category="all";
+  categoryFilter.value="all";
+  priceMode="off";
+  priceSort.textContent="PRICE: OFF";
+  selectedSignals.clear();
+  intelligenceGrid.querySelectorAll(".intel-btn").forEach(btn=>{
+    btn.classList.remove("active");
+    if(btn.classList.contains("locked")) btn.querySelector(".intel-state").textContent=btn.dataset.signal==="others" ? "LOCKED · PREMIUM" : "LOCKED · PRO+";
+  });
+  renderRows();
+});
+
+intelligenceGrid.addEventListener("click",event=>{
+  const button=event.target.closest(".intel-btn");
+  if(!button) return;
+  const signal=button.dataset.signal;
+  if(lockedSignals.has(signal)){
+    button.animate([{transform:"translateX(0)"},{transform:"translateX(-3px)"},{transform:"translateX(3px)"},{transform:"translateX(0)"}],{duration:180});
     return;
   }
+  if(selectedSignals.has(signal)){
+    selectedSignals.delete(signal);
+    button.classList.remove("active");
+    button.querySelector(".intel-state").textContent="AVAILABLE";
+  }else{
+    selectedSignals.add(signal);
+    button.classList.add("active");
+    button.querySelector(".intel-state").textContent="ACTIVE";
+  }
+  renderRows();
+});
 
-  try {
+renderRows();
+
+onAuthStateChanged(auth, async(user)=>{
+  if(!user){
+    deny("Login required.","Please login through Affiliate OS before opening Product Radar.","LOGIN REQUIRED");
+    return;
+  }
+  try{
     await reload(user);
-
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    if (!userSnap.exists()) {
-      deny("Profile not found.", "Your authentication account has no Affiliate OS profile.", "PROFILE NOT FOUND");
+    const userSnap=await getDoc(doc(db,"users",user.uid));
+    if(!userSnap.exists()){
+      deny("Profile not found.","Your authentication account has no Affiliate OS profile.","PROFILE NOT FOUND");
       return;
     }
-
-    const profile = userSnap.data();
-    const authVerified = user.emailVerified === true;
-
-    if (profile.emailVerified !== authVerified) {
-      await updateDoc(doc(db, "users", user.uid), {
-        emailVerified: authVerified,
-        updatedAt: serverTimestamp()
-      });
-      profile.emailVerified = authVerified;
+    const profile=userSnap.data();
+    const authVerified=user.emailVerified===true;
+    if(profile.emailVerified!==authVerified){
+      await updateDoc(doc(db,"users",user.uid),{emailVerified:authVerified,updatedAt:serverTimestamp()});
+      profile.emailVerified=authVerified;
     }
-
-    if (!authVerified) {
-      deny(
-        "Verify your email first.",
-        "Your Firebase email verification is not complete yet. Verify the email address, then return and login again.",
-        "EMAIL VERIFICATION REQUIRED"
-      );
+    if(!authVerified){
+      deny("Verify your email first.","Your Firebase email verification is not complete yet. Verify the email address, then return and login again.","EMAIL VERIFICATION REQUIRED");
       return;
     }
-
-    if (profile.approvalStatus !== "APPROVED") {
-      deny(
-        "Your membership is pending approval.",
-        "Your email is verified, but an administrator has not approved your Affiliate OS membership yet.",
-        "PENDING ADMIN APPROVAL"
-      );
+    if(profile.approvalStatus!=="APPROVED"){
+      deny("Your membership is pending approval.","Your email is verified, but an administrator has not approved your Affiliate OS membership yet.","PENDING ADMIN APPROVAL");
       return;
     }
-
-    const permissionSnap = await getDoc(doc(db, "userPermissions", user.uid));
-    if (!permissionSnap.exists() || permissionSnap.data().productRadar !== true) {
-      deny(
-        "Product Radar is locked.",
-        "Your account is approved, but Product Radar has not been enabled for your current package or permissions.",
-        "PRODUCT RADAR LOCKED"
-      );
+    const permissionSnap=await getDoc(doc(db,"userPermissions",user.uid));
+    if(!permissionSnap.exists() || permissionSnap.data().productRadar!==true){
+      deny("Product Radar is locked.","Your account is approved, but Product Radar has not been enabled for your current package or permissions.","PRODUCT RADAR LOCKED");
       return;
     }
-
     allow();
-  } catch (error) {
-    deny(
-      "Access check failed.",
-      error?.message || "Unable to verify your Affiliate OS access.",
-      "CHECK FAILED"
-    );
+  }catch(error){
+    deny("Access check failed.",error?.message||"Unable to verify your Affiliate OS access.","CHECK FAILED");
   }
 });
 </script>
