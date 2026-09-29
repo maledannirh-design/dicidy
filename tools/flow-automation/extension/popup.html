@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DICIDY Flow Bridge</title>
+  <style>
+    body {
+      margin: 0;
+      width: 340px;
+      font-family: Arial, sans-serif;
+      background: #f7f2e9;
+      color: #2e5d3a;
+    }
+    main { padding: 18px; }
+    h1 { font-size: 17px; margin: 0 0 8px; }
+    p { font-size: 12px; line-height: 1.45; margin: 0 0 14px; }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: #e5a9a9;
+      color: #2e5d3a;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 12px 0 0;
+      font-size: 11px;
+      max-height: 260px;
+      overflow: auto;
+    }
+    .note { opacity: .75; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DICIDY Flow Automation Bridge</h1>
+    <p>First test only: verify that this extension can inspect your existing ChatGPT and Google Flow tabs without creating a new Chrome profile.</p>
+    <button id="test">TEST EXISTING CHROME</button>
+    <div class="note">No passwords or cookies are exported.</div>
+    <pre id="result">Waiting for test…</pre>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
