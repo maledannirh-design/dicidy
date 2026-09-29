@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DICIDY Affiliate OS Admin</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="subpage admin-page">
+<header class="topbar">
+<a class="brand" href="/">DICIDY</a>
+<div class="tagline">ADMIN / AFFILIATE OS</div>
+</header>
+
+<section class="admin-head">
+<div><div class="kicker">DICIDY / ADMIN</div><h1>MEMBER CONTROL.</h1><p>Approve members, assign packages and control feature access with a permission matrix.</p></div>
+<a class="admin-exit" href="/shop/affiliator/">Affiliate OS →</a>
+</section>
+
+<section class="admin-stats">
+<div><span>12</span><small>PENDING</small></div>
+<div><span>48</span><small>ACTIVE</small></div>
+<div><span>7</span><small>EXPIRED</small></div>
+<div><span>3</span><small>TRIAL</small></div>
+</section>
+
+<section class="admin-section">
+<div class="section-title"><div><div class="kicker">01 / APPROVALS</div><h2>Membership approval</h2></div><span class="auth-status">ADMIN ONLY</span></div>
+<div class="member-table">
+<div class="member-row member-head"><span>Member</span><span>Email</span><span>Verification</span><span>Status</span><span>Action</span></div>
+<div class="member-row"><span><strong>Andi Pratama</strong><small>@andi</small></span><span>andi@example.com</span><span class="ok">VERIFIED</span><span>PENDING</span><button>REVIEW</button></div>
+<div class="member-row"><span><strong>Sari Putri</strong><small>@sarip</small></span><span>sari@example.com</span><span class="ok">VERIFIED</span><span>PENDING</span><button>REVIEW</button></div>
+<div class="member-row"><span><strong>Budi Store</strong><small>@budistore</small></span><span>budi@example.com</span><span class="ok">VERIFIED</span><span class="muted">REJECTED</span><button>VIEW</button></div>
+</div>
+</section>
+
+<section class="admin-section">
+<div class="section-title"><div><div class="kicker">02 / USER ACCESS</div><h2>Permission matrix</h2></div></div>
+<div class="selected-user">
+<div><strong>Andi Pratama</strong><span>@andi · andi@example.com</span></div>
+<div class="select-wrap"><label>Package<select><option>BASIC — 30%</option><option selected>PRO — 35%</option><option>PRO + COUNSELLING — 60%</option><option>DIAMOND — 40%</option></select></label></div>
+<div class="select-wrap"><label>Access Status<select><option selected>ACTIVE</option><option>TRIAL</option><option>PENDING</option><option>EXPIRED</option><option>SUSPENDED</option></select></label></div>
+</div>
+
+<div class="matrix-wrap">
+<table class="permission-matrix">
+<thead><tr><th>Feature</th><th>Package Default</th><th>Member Access</th></tr></thead>
+<tbody>
+<tr><td>Product Radar</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
+<tr><td>Best Seller</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
+<tr><td>Trending 24H</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
+<tr><td>Content Factory</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
+<tr><td>Content Queue</td><td>✓</td><td><label class="check"><input type="checkbox" checked><span></span></label></td></tr>
+<tr><td>Analytics</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
+<tr><td>Advanced Analytics</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
+<tr><td>Prompt Editor</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
+<tr><td>Counselling</td><td>—</td><td><label class="check"><input type="checkbox"><span></span></label></td></tr>
+</tbody>
+</table>
+</div>
+<div class="admin-actions"><button class="secondary">RESET TO PACKAGE DEFAULT</button><button class="primary">SAVE PERMISSIONS</button></div>
+</section>
+
+<section class="admin-section">
+<div class="section-title"><div><div class="kicker">03 / PACKAGE MATRIX</div><h2>Default access rules</h2></div></div>
+<div class="matrix-wrap">
+<table class="permission-matrix package-matrix">
+<thead><tr><th>Feature</th><th>BASIC<br>30%</th><th>PRO<br>35%</th><th>PRO + COUNSELLING<br>60%</th><th>DIAMOND<br>40%</th></tr></thead>
+<tbody>
+<tr><td>Product Radar</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Best Seller</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Trending 24H</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Content Factory</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Analytics</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+<tr><td>Advanced Analytics</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+<tr><td>Prompt Editor</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+<tr><td>Counselling</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>
