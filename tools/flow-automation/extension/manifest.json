@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "DICIDY Flow Automation Bridge",
+  "version": "0.1.0",
+  "description": "Local bridge for DICIDY automation using the existing Chrome session.",
+  "minimum_chrome_version": "125",
+  "permissions": [
+    "debugger",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "DICIDY Flow Bridge",
+    "default_popup": "popup.html"
+  }
+}
