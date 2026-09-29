@@ -222,7 +222,41 @@ const products = [
 let category = "all";
 let priceMode = "off";
 let selectedSignals = new Set();
-const lockedSignals = new Set(["highCommission","trending24h","newProduct","bestSeller","rising","opportunity","others"]);
+let lockedSignals = new Set(["flashSale","highCommission","trending24h","newProduct","bestSeller","rising","opportunity","others"]);
+
+function applyIntelligenceAccess(packageValue){
+  const isPro = packageValue === "PRO" || packageValue === "PRO_COUNSELLING";
+  const isDiamond = packageValue === "DIAMOND";
+  const unlocked = new Set();
+  if(isPro || isDiamond){
+    ["flashSale","highCommission","trending24h","newProduct","bestSeller","rising","opportunity"].forEach(signal=>unlocked.add(signal));
+  }
+  if(isDiamond) unlocked.add("others");
+  lockedSignals = new Set(["flashSale","highCommission","trending24h","newProduct","bestSeller","rising","opportunity","others"].filter(signal=>!unlocked.has(signal)));
+  intelligenceGrid.querySelectorAll(".intel-btn").forEach(button=>{
+    const signal=button.dataset.signal;
+    const locked=lockedSignals.has(signal);
+    button.classList.toggle("locked",locked);
+    const state=button.querySelector(".intel-state");
+    const lockIcon=button.querySelector(".lock-icon");
+    if(locked){
+      if(!lockIcon){
+        const icon=document.createElement("span");
+        icon.className="lock-icon";
+        icon.textContent="⌁";
+        button.prepend(icon);
+      }
+      state.textContent=signal==="others" ? "LOCKED · DIAMOND" : "LOCKED · PRO+";
+    }else{
+      if(lockIcon) lockIcon.remove();
+      state.textContent=selectedSignals.has(signal) ? "ACTIVE" : "AVAILABLE";
+    }
+  });
+  selectedSignals.forEach(signal=>{
+    if(lockedSignals.has(signal)) selectedSignals.delete(signal);
+  });
+  renderRows();
+}
 
 function deny(title,message,status){
   gateTitle.textContent=title;
@@ -372,10 +406,12 @@ onAuthStateChanged(auth, async(user)=>{
       return;
     }
     const permissionSnap=await getDoc(doc(db,"userPermissions",user.uid));
-    if(!permissionSnap.exists() || permissionSnap.data().productRadar!==true){
+    const permissions = permissionSnap.exists() ? permissionSnap.data() : {};
+    if(!permissionSnap.exists() || permissions.productRadar!==true){
       deny("Product Radar is locked.","Your account is approved, but Product Radar has not been enabled for your current package or permissions.","PRODUCT RADAR LOCKED");
       return;
     }
+    applyIntelligenceAccess(profile.package || null);
     allow();
   }catch(error){
     deny("Access check failed.",error?.message||"Unable to verify your Affiliate OS access.","CHECK FAILED");
