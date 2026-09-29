@@ -28,7 +28,7 @@ async function connectToExistingChrome() {
   log(`Connecting to existing Chrome: ${CDP_ENDPOINT}`);
 
   try {
-    const browser = await chromium.connectOverCDP(CDP_ENDPOINT);
+    const browser = await chromium.connectOverCDP(CDP_ENDPOINT, { isLocal: true, noDefaults: true });
     const contexts = browser.contexts();
 
     if (!contexts.length) {
