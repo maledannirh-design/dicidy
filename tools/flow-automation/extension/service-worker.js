@@ -413,32 +413,69 @@ async function testFlowDirectInput() {
       await new Promise(r=>setTimeout(r,700));
     }
 
-    const probe=await evaluate(flowTab.id,`(() => {
+    // Current Flow Agent composer can expose the prompt as a generic element
+    // rather than a Slate editor. Find the visible "What do you want to create?"
+    // surface first, then fall back to normal editors.
+    const target = await evaluate(flowTab.id,`(() => {
       const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";};
-      const all=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]')).filter(visible);
-      const ed=all[all.length-1];
-      if(!ed)return {ok:false,reason:"No visible Flow editor after Scenes click",elements:all.length};
-      const r=ed.getBoundingClientRect();
-      return {ok:true,tag:ed.tagName,slate:ed.matches('[data-slate-editor="true"]'),x:r.left+Math.min(r.width/2,300),y:r.top+Math.min(r.height/2,40),placeholder:ed.getAttribute("data-placeholder")||ed.getAttribute("placeholder")||""};
+      const all=Array.from(document.querySelectorAll('*')).filter(visible);
+      const placeholder=all.find(el => {
+        const t=(el.innerText||"").trim();
+        return t === "What do you want to create?";
+      });
+      const editors=Array.from(document.querySelectorAll('[contenteditable="true"],textarea,input[type="text"],[role="textbox"],[data-slate-editor="true"]')).filter(visible);
+      const candidate=editors[editors.length-1] || placeholder;
+      if(!candidate)return {ok:false,reason:"No Flow composer/editor or Agent placeholder found"};
+      const r=candidate.getBoundingClientRect();
+      return {
+        ok:true,
+        source:editors.length?"editor":"agent-placeholder",
+        tag:candidate.tagName,
+        role:candidate.getAttribute("role")||"",
+        contenteditable:candidate.getAttribute("contenteditable")||"",
+        placeholder:candidate.getAttribute("placeholder")||candidate.getAttribute("data-placeholder")||"",
+        text:(candidate.innerText||candidate.textContent||candidate.value||"").slice(0,200),
+        x:r.left+Math.min(r.width/2,300),
+        y:r.top+Math.min(r.height/2,30),
+        rect:{left:r.left,top:r.top,width:r.width,height:r.height}
+      };
     })()`);
-    if(!probe?.ok) return {ok:false,scene,probe};
+
+    if(!target?.ok)return {ok:false,scene,target};
+
+    // Click the target surface.
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:target.x,y:target.y});
+    await new Promise(r=>setTimeout(r,100));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:target.x,y:target.y,button:"left",clickCount:1});
+    await new Promise(r=>setTimeout(r,50));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:target.x,y:target.y,button:"left",clickCount:1});
+    await new Promise(r=>setTimeout(r,250));
 
     const text="DICIDY DIRECT FLOW TEST — THIS TEXT MUST APPEAR";
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:probe.x,y:probe.y});
-    await new Promise(r=>setTimeout(r,100));
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:probe.x,y:probe.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,50));
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:probe.x,y:probe.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,250));
     await sendCommand(flowTab.id,"Input.insertText",{text});
     await new Promise(r=>setTimeout(r,500));
 
-    const verify=await evaluate(flowTab.id,`(() => {
-      const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]'));
-      const visible=nodes.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});
-      return {found:visible.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:visible.slice(-6).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||""}))};
+    // If insertText did not work, use a trusted key sequence as fallback.
+    let verify=await evaluate(flowTab.id,`(() => {
+      const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"],[role="textbox"]'));
+      return {found:nodes.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:nodes.slice(-8).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("placeholder")||el.getAttribute("data-placeholder")||""}))};
     })()`);
-    return {ok:Boolean(verify?.found),scene,probe,verify};
+
+    if(!verify?.found){
+      for(const ch of text){
+        if(ch===" "){await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyDown",windowsVirtualKeyCode:32,key:" "});await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"keyUp",windowsVirtualKeyCode:32,key:" "});}
+        else {
+          await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{type:"char",text:ch,key:ch});
+        }
+      }
+      await new Promise(r=>setTimeout(r,500));
+      verify=await evaluate(flowTab.id,`(() => {
+        const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"],[role="textbox"]'));
+        return {found:nodes.some(el=>(el.innerText||el.textContent||el.value||"").includes("DICIDY DIRECT FLOW TEST")),values:nodes.slice(-8).map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").slice(0,200),placeholder:el.getAttribute("placeholder")||el.getAttribute("data-placeholder")||""}))};
+      })()`);
+    }
+
+    return {ok:Boolean(verify?.found),scene,target,verify};
   } finally {
     await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
   }
