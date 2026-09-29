@@ -1,0 +1,4 @@
+# Local DICIDY Flow Automation
+tools/flow-automation/profiles/
+tools/flow-automation/job.json
+tools/flow-automation/job-result.json
