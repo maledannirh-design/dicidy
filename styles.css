@@ -3,30 +3,30 @@
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{min-height:100vh}
 a{color:inherit;text-decoration:none}
+button{font:inherit}
 .page{max-width:1500px;margin:0 auto;padding:28px 28px 24px}
 .topbar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:4px 4px 20px}
 .brand{font-family:Georgia,serif;letter-spacing:.28em;font-size:24px}
 .tagline{font-size:10px;letter-spacing:.24em;color:var(--muted)}
-.hero{text-align:center;padding:48px 0 34px}
+.hero{text-align:center;padding:48px 0 28px}
 .eyebrow{font-size:10px;letter-spacing:.35em;color:#bdb5aa;margin:0 0 15px}
 h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(42px,6vw,78px);line-height:1;margin:0}
 .intro{margin:17px 0 0;color:#b8b0a7;letter-spacing:.25em;text-transform:uppercase;font-size:12px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;align-items:start}
-.card{position:relative;display:block;overflow:hidden;background:var(--panel);border:1px solid var(--line);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
-.card img{display:block;width:100%;height:auto}
-.card:hover{transform:translateY(-7px);border-color:rgba(255,255,255,.5);box-shadow:0 18px 50px rgba(0,0,0,.6)}
-.card-label{position:absolute;left:0;right:0;bottom:0;padding:20px 16px 15px;background:linear-gradient(transparent,rgba(0,0,0,.78));font-family:Georgia,serif;letter-spacing:.28em;font-size:13px;text-align:center}
-.subpage{max-width:1050px;margin:0 auto;padding:28px}
-.subhero{text-align:center;padding:70px 0 45px}
-.subhero h1{font-size:clamp(44px,7vw,82px)}
-.subhero p{max-width:680px;margin:22px auto 0;color:var(--muted);line-height:1.7}
-.option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.option{padding:28px;border:1px solid var(--line);background:linear-gradient(145deg,#141414,#0d0d0d);min-height:180px;transition:.2s}
-.option:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.45)}
-.option h2{font-family:Georgia,serif;font-weight:400;margin:0 0 12px}
-.option p{color:var(--muted);line-height:1.6;font-size:14px}
-.kicker{font-size:10px;letter-spacing:.3em;color:#aaa;text-transform:uppercase}
-.back{display:inline-block;margin-top:35px;color:#aaa;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
-footer{display:flex;justify-content:space-between;padding:30px 4px 0;color:#777;font-size:9px;letter-spacing:.2em;text-transform:uppercase}
-@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.option-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.page{padding:18px 14px}.topbar{align-items:flex-start}.tagline{display:none}.hero{padding:35px 0 26px}.cards{grid-template-columns:1fr 1fr;gap:10px}.card-label{font-size:10px;padding:13px 8px 10px}.subpage{padding:18px 14px}.subhero{padding:45px 0 30px}.option{min-height:auto}footer{font-size:8px}}
+
+.carousel{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;max-width:720px;margin:0 auto}
+.carousel-stage{position:relative;width:min(390px,72vw);height:min(570px,76vh);min-height:430px;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.card{position:absolute;inset:0;margin:auto;width:100%;height:100%;overflow:hidden;background:var(--panel);border:1px solid var(--line);opacity:0;visibility:hidden;transform:scale(.94);transition:opacity .28s ease,transform .35s ease,visibility .35s ease;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+.card.active{opacity:1;visibility:visible;transform:scale(1);z-index:2}
+.card img{display:block;width:100%;height:100%;object-fit:cover}
+.card-label{position:absolute;left:0;right:0;bottom:0;padding:38px 16px 18px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-family:Georgia,serif;letter-spacing:.28em;font-size:14px;text-align:center}
+.card:hover{border-color:rgba(255,255,255,.5)}
+.carousel-arrow{width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:50%;background:rgba(0,0,0,.5);color:#eee;font-size:34px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;z-index:4}
+.carousel-arrow:hover{background:#181818;border-color:rgba(255,255,255,.6);transform:scale(1.06)}
+.carousel-meta{text-align:center;padding:20px 0 4px}
+.dots{display:flex;justify-content:center;gap:8px}
+.dot{width:7px;height:7px;padding:0;border:1px solid #888;border-radius:50%;background:transparent;cursor:pointer;transition:.2s}
+.dot.active{background:#eee;border-color:#eee;transform:scale(1.2)}
+.swipe-hint{margin:12px 0 0;color:#777;font-size:9px;letter-spacing:.24em}
+footer{display:flex;justify-content:space-between;padding:28px 4px 0;color:#777;font-size:9px;letter-spacing:.2em;text-transform:uppercase}
+@media(max-width:600px){.page{padding:18px 14px}.topbar{align-items:flex-start}.tagline{display:none}.hero{padding:35px 0 22px}.carousel{gap:7px}.carousel-stage{width:min(310px,78vw);height:min(480px,68vh);min-height:390px}.carousel-arrow{width:40px;height:40px;font-size:28px}.card-label{font-size:11px;padding:32px 8px 14px}.swipe-hint{font-size:8px}footer{font-size:8px}}
+@media(min-width:1400px){.carousel-stage{width:410px;height:600px}}
