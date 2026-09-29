@@ -21,16 +21,57 @@
 <form>
 <label>Email or Username<input type="text" placeholder="username or email"></label>
 <label>Password<input type="password" placeholder="Password"></label>
-<button class="auth-button login-submit" type="button">LOGIN</button>
+<label class="remember-device"><input id="rememberDevice" type="checkbox"><span>Remember this device</span></label>
+<button class="auth-button login-submit" id="loginButton" type="button">LOGIN</button>
 </form>
 <div class="login-divider"><span>NEW MEMBER?</span></div>
 <a class="register-link" href="/shop/affiliator/auth/">REGISTER</a>
-<div class="login-note">Email verification and administrator approval are required before protected tools can be opened.</div>
+<div class="session-note"><span id="sessionStatus">Session security: 72-hour maximum.</span></div>
+<div class="login-note">Email verification and administrator approval are required before protected tools can be opened. If a remembered session reaches 72 hours, access closes when you return to this tab and login is required again.</div>
 </div>
 </div>
 <script>
 const modal=document.getElementById('loginModal');
 document.getElementById('openLogin').addEventListener('click',()=>modal.classList.add('hidden'));
 document.getElementById('closeLogin').addEventListener('click',()=>modal.classList.add('hidden'));
+
+const SESSION_KEY='dicidy_affiliate_session_started_at';
+const REMEMBER_KEY='dicidy_affiliate_remember_device';
+const SESSION_LIMIT=72*60*60*1000;
+const remember=document.getElementById('rememberDevice');
+const loginButton=document.getElementById('loginButton');
+const status=document.getElementById('sessionStatus');
+
+function sessionExpired(){
+  const started=Number(localStorage.getItem(SESSION_KEY)||0);
+  return !started || (Date.now()-started)>=SESSION_LIMIT;
+}
+function clearSession(){
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(REMEMBER_KEY);
+  remember.checked=false;
+  status.textContent='Session expired. Please login again.';
+  modal.classList.remove('hidden');
+}
+function restoreRememberedSession(){
+  if(localStorage.getItem(REMEMBER_KEY)==='true' && !sessionExpired()){
+    modal.classList.add('hidden');
+    status.textContent='Remembered device · session expires within 72 hours.';
+  }else if(localStorage.getItem(REMEMBER_KEY)==='true' && sessionExpired()){
+    clearSession();
+  }
+}
+loginButton.addEventListener('click',()=>{
+  localStorage.setItem(SESSION_KEY,String(Date.now()));
+  localStorage.setItem(REMEMBER_KEY,remember.checked?'true':'false');
+  status.textContent=remember.checked?'Remembered device · session expires within 72 hours.':'Session active · login required again after session ends.';
+  modal.classList.add('hidden');
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && localStorage.getItem(REMEMBER_KEY)==='true' && sessionExpired()){
+    clearSession();
+  }
+});
+restoreRememberedSession();
 </script>
 </body></html>
