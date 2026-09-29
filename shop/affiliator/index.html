@@ -63,7 +63,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  reload
+  reload,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
   doc,
@@ -185,6 +187,10 @@ radarCard.addEventListener("click", (event) => {
   }
 });
 
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Unable to set Firebase local persistence:", error);
+});
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     accountTitle.textContent = "Login to enter Affiliate OS";
@@ -196,6 +202,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
+    hideModal();
     await loadAccount(user);
     openLogin.textContent = "ACCOUNT ACTIVE";
   } catch (error) {
