@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Radar — BelanjaBagus Affiliate OS</title>
+<link rel="stylesheet" href="/styles.css">
+<style>
+.radar-page{max-width:1380px;margin:0 auto;padding:28px}
+.radar-header{display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line);padding:4px 4px 22px}
+.radar-title{padding:52px 0 30px}
+.radar-title .kicker{margin-bottom:12px}
+.radar-title h1{font-size:clamp(42px,6vw,72px)}
+.radar-title p{color:var(--muted);max-width:680px;line-height:1.7;margin:16px 0 0}
+.radar-search{width:100%;border:1px solid var(--line);background:#0d0d0d;color:var(--text);padding:16px 18px;font-size:14px;outline:none}
+.radar-search:focus{border-color:rgba(255,255,255,.45)}
+.radar-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}
+.radar-filter{border:1px solid var(--line);background:#0d0d0d;color:#bbb;padding:10px 14px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.radar-filter.active,.radar-filter:hover{color:#f4efe7;border-color:rgba(255,255,255,.5);background:#151515}
+.radar-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.radar-stat{border:1px solid var(--line);padding:18px;background:linear-gradient(145deg,#141414,#0d0d0d)}
+.radar-stat span{display:block;color:#777;font-size:9px;letter-spacing:.18em;text-transform:uppercase}
+.radar-stat strong{display:block;font-family:Georgia,serif;font-size:30px;font-weight:400;margin-top:8px}
+.radar-table{border:1px solid var(--line);overflow:hidden;background:#0b0b0b}
+.radar-table-head,.radar-row{display:grid;grid-template-columns:42px minmax(280px,2.3fr) 120px 100px 100px 100px 130px;align-items:center}
+.radar-table-head{padding:12px 16px;color:#777;font-size:9px;letter-spacing:.16em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.radar-row{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);min-height:92px}
+.radar-row:last-child{border-bottom:0}
+.radar-row:hover{background:#111}
+.radar-check{width:16px;height:16px;accent-color:#eee}
+.product{display:flex;align-items:center;gap:14px;min-width:0}
+.product img{width:62px;height:62px;object-fit:cover;background:#171717;border:1px solid var(--line)}
+.product-name{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-shop{font-size:11px;color:#777;margin-top:5px}
+.radar-muted{color:#aaa;font-size:12px}
+.radar-score{font-family:Georgia,serif;font-size:20px}
+.hot{color:#d9b47c;font-size:10px;letter-spacing:.12em}
+.radar-actions{display:flex;gap:7px}
+.radar-btn{border:1px solid var(--line);background:transparent;color:#ddd;padding:9px 10px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.radar-btn:hover{border-color:rgba(255,255,255,.5);background:#161616}
+.radar-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#777;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.radar-footer a:hover{color:#eee}
+@media(max-width:1000px){
+.radar-table-head{display:none}
+.radar-row{grid-template-columns:34px 1fr 90px;padding:16px}
+.radar-row>div:nth-child(3),.radar-row>div:nth-child(4),.radar-row>div:nth-child(5),.radar-row>div:nth-child(6){display:none}
+.radar-actions{justify-content:flex-end}
+.radar-summary{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+.radar-page{padding:18px 14px}
+.radar-header{align-items:flex-start}
+.radar-header .tagline{display:none}
+.radar-title{padding:42px 0 24px}
+.radar-summary{gap:8px}
+.radar-stat{padding:14px}
+.radar-stat strong{font-size:24px}
+.radar-row{grid-template-columns:28px 1fr;padding:13px 10px}
+.radar-row>div:last-child{grid-column:2;margin-top:9px}
+.product img{width:52px;height:52px}
+.product-name{font-size:13px}
+.radar-actions{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<main class="radar-page">
+<header class="radar-header">
+<a class="brand" href="/">DICIDY</a>
+<div class="tagline">BELANJABAGUS AFFILIATE OS</div>
+</header>
+
+<section class="radar-title">
+<div class="kicker">SHOP / AFFILIATOR / RADAR</div>
+<h1>PRODUCT RADAR.</h1>
+<p>Find products worth creating content for. Start with the strongest opportunities, then move selected products into the content queue.</p>
+</section>
+
+<input class="radar-search" type="search" placeholder="Search product, shop, category..." aria-label="Search products">
+
+<div class="radar-filters">
+<button class="radar-filter active">Trending 24H</button>
+<button class="radar-filter">High Commission</button>
+<button class="radar-filter">Best Seller</button>
+<button class="radar-filter">New</button>
+<button class="radar-filter">Beauty</button>
+<button class="radar-filter">Fashion</button>
+<button class="radar-filter">Household</button>
+<button class="radar-filter">All</button>
+</div>
+
+<section class="radar-summary">
+<div class="radar-stat"><span>Trending Products</span><strong>33</strong></div>
+<div class="radar-stat"><span>High Commission</span><strong>12</strong></div>
+<div class="radar-stat"><span>New Opportunities</span><strong>8</strong></div>
+<div class="radar-stat"><span>Content Ready</span><strong>5</strong></div>
+</section>
+
+<section class="radar-table" aria-label="Product Radar list">
+<div class="radar-table-head">
+<div> </div><div>Product</div><div>Price</div><div>Commission</div><div>Sold</div><div>Score</div><div>Action</div>
+</div>
+
+<div class="radar-row">
+<div><input class="radar-check" type="checkbox"></div>
+<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Mododo Tumbler 500ml</div><div class="product-shop">Mododo Official Store</div></div></div>
+<div class="radar-muted">Rp49.000</div><div class="radar-muted">11.5%</div><div class="radar-muted">12.4K</div><div><span class="radar-score">92</span><div class="hot">HOT</div></div>
+<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
+</div>
+
+<div class="radar-row">
+<div><input class="radar-check" type="checkbox"></div>
+<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Women's Everyday Bag</div><div class="product-shop">Fashion Store</div></div></div>
+<div class="radar-muted">Rp16.500</div><div class="radar-muted">13.5%</div><div class="radar-muted">8.7K</div><div><span class="radar-score">88</span><div class="hot">HOT</div></div>
+<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
+</div>
+
+<div class="radar-row">
+<div><input class="radar-check" type="checkbox"></div>
+<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Scarlet Perfume</div><div class="product-shop">Beauty Store</div></div></div>
+<div class="radar-muted">Rp12.999</div><div class="radar-muted">20.0%</div><div class="radar-muted">21.3K</div><div><span class="radar-score">86</span><div class="hot">HOT</div></div>
+<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
+</div>
+
+<div class="radar-row">
+<div><input class="radar-check" type="checkbox"></div>
+<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Classic Straight Jeans</div><div class="product-shop">Denim Official</div></div></div>
+<div class="radar-muted">Rp56.420</div><div class="radar-muted">14.5%</div><div class="radar-muted">6.2K</div><div><span class="radar-score">82</span><div class="hot">RISING</div></div>
+<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
+</div>
+
+<div class="radar-row">
+<div><input class="radar-check" type="checkbox"></div>
+<div class="product"><img src="/assets/shopcard.png" alt=""><div><div class="product-name">Everyday Walking Shoes</div><div class="product-shop">Comfort Footwear</div></div></div>
+<div class="radar-muted">Rp85.000</div><div class="radar-muted">21.5%</div><div class="radar-muted">4.9K</div><div><span class="radar-score">79</span><div class="hot">RISING</div></div>
+<div class="radar-actions"><button class="radar-btn">View</button><button class="radar-btn">+ Queue</button></div>
+</div>
+</section>
+
+<div class="radar-footer">
+<a href="/shop/affiliator/">← Affiliate OS</a>
+<span>V1 · SAMPLE DATA</span>
+<a href="/shop/">Shop</a>
+</div>
+</main>
+</body>
+</html>
