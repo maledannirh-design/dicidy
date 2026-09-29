@@ -4,3 +4,5 @@ tools/flow-automation/job.json
 tools/flow-automation/job-result.json
 tools/flow-automation/bridge-diagnostic.json
 tools/flow-automation/bridge-job-result.json
+
+tools/flow-automation/assets/
