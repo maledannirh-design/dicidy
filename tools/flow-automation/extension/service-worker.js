@@ -1,8 +1,5 @@
 const CHAT_TITLE = "DICIDY VIDEO PROMPT ENGINE";
-const FLOW_PATTERNS = [
-  /^https?:\/\/flow\\.google\\//i,
-  /^https?:\/\/labs\\.google\\/fx\\/tools\\/flow/i
-];
+const FLOW_HOSTS = ["flow.google.com", "labs.google.com"];
 const BRIDGE_URL = "http://127.0.0.1:8787";
 
 async function evaluate(tabId, expression) {
@@ -53,8 +50,8 @@ async function findTargets() {
   );
 
   const flowCandidates = tabs.filter(tab => {
-    const value = String(tab.url || tab.pendingUrl || "");
-    return /flow\.google\.com/i.test(value) || /labs\.google\.com.*flow/i.test(value);
+    const value = String(tab.url || tab.pendingUrl || "").toLowerCase();
+    return FLOW_HOSTS.some(host => value.includes(host)) && value.includes("flow");
   });
 
   const flow = flowCandidates[0] || null;
