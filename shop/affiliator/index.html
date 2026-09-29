@@ -50,6 +50,7 @@
       <label>Email<input id="loginEmail" type="email" placeholder="name@example.com" autocomplete="email" required></label>
       <label>Password<input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required></label>
       <button class="auth-button login-submit" id="loginButton" type="submit">LOGIN</button>
+      <button class="secondary resend-button hidden" id="resendVerification" type="button">RESEND VERIFICATION EMAIL</button>
     </form>
     <div class="login-divider"><span>NEW MEMBER?</span></div>
     <a class="register-link" href="/shop/affiliator/auth/">REGISTER</a>
@@ -65,7 +66,8 @@ import {
   signOut,
   reload,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
   doc,
@@ -79,6 +81,7 @@ const openLogin = document.getElementById("openLogin");
 const loginForm = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
+const resendVerification = document.getElementById("resendVerification");
 const accountTitle = document.getElementById("accountTitle");
 const accountStatus = document.getElementById("accountStatus");
 const radarCard = document.getElementById("radarCard");
@@ -87,6 +90,14 @@ const radarAccess = document.getElementById("radarAccess");
 function showModal() {
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
+}
+
+function showResendVerification() {
+  resendVerification.classList.remove("hidden");
+}
+
+function hideResendVerification() {
+  resendVerification.classList.add("hidden");
 }
 
 function hideModal() {
@@ -144,8 +155,13 @@ async function loadAccount(user) {
   if (!authVerified) {
     accountStatus.textContent = "EMAIL NOT VERIFIED · Please verify your email before approval.";
     setRadarLocked("EMAIL VERIFICATION REQUIRED");
+    showModal();
+    showResendVerification();
+    loginStatus.textContent = "Verification required. If your previous link expired, send a new one below.";
     return;
   }
+
+  hideResendVerification();
 
   if (data.approvalStatus !== "APPROVED") {
     accountStatus.textContent = "EMAIL VERIFIED · MEMBERSHIP PENDING ADMIN APPROVAL.";
@@ -171,12 +187,36 @@ loginForm.addEventListener("submit", async (event) => {
       document.getElementById("loginEmail").value.trim().toLowerCase(),
       document.getElementById("loginPassword").value
     );
-    hideModal();
   } catch (error) {
     loginStatus.textContent = friendlyError(error);
   } finally {
     loginButton.disabled = false;
     loginButton.textContent = "LOGIN";
+  }
+});
+
+resendVerification.addEventListener("click", async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    loginStatus.textContent = "Login first, then resend the verification email.";
+    return;
+  }
+  resendVerification.disabled = true;
+  resendVerification.textContent = "SENDING...";
+  try {
+    await reload(user);
+    if (user.emailVerified) {
+      await loadAccount(user);
+      loginStatus.textContent = "Email already verified. Continue with your account.";
+      return;
+    }
+    await sendEmailVerification(user);
+    loginStatus.textContent = "New verification email sent. Check your inbox or Spam / Junk folder.";
+  } catch (error) {
+    loginStatus.textContent = friendlyError(error);
+  } finally {
+    resendVerification.disabled = false;
+    resendVerification.textContent = "RESEND VERIFICATION EMAIL";
   }
 });
 
