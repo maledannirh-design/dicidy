@@ -262,56 +262,214 @@ async function sendPromptToChat(chatTab, prompt) {
 
 async function prepareFlow(flowTab, compiledPrompt) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
+
   try {
-    const sceneNav = await evaluate(flowTab.id, `(() => {
-      const visible = el => { const r=el.getBoundingClientRect(),s=getComputedStyle(el); return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"&&!el.disabled; };
-      const nodes=Array.from(document.querySelectorAll('button,[role="button"],a')).filter(visible);
-      const target=nodes.find(el=>/^Scenes$/i.test([el.innerText||"",el.getAttribute("aria-label")||"",el.getAttribute("title")||""].join(" ").trim()));
-      if(!target)return {found:false}; const r=target.getBoundingClientRect(); return {found:true,x:r.left+r.width/2,y:r.top+r.height/2};
-    })()`);
-    if(sceneNav?.found){
+    // Flow's Agent composer only appears reliably after entering Scenes.
+    const sceneNav = await evaluate(flowTab.id, \`(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.visibility !== "hidden" &&
+          s.display !== "none" &&
+          !el.disabled;
+      };
+      const nodes = Array.from(document.querySelectorAll('button,[role="button"],a')).filter(visible);
+      const target = nodes.find(el =>
+        /^Scenes$/i.test([
+          el.innerText || "",
+          el.getAttribute("aria-label") || "",
+          el.getAttribute("title") || ""
+        ].join(" ").trim())
+      );
+      if (!target) return { found:false };
+      const r = target.getBoundingClientRect();
+      return { found:true, x:r.left+r.width/2, y:r.top+r.height/2 };
+    })()\`);
+
+    if (sceneNav?.found) {
       await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:sceneNav.x,y:sceneNav.y});
       await new Promise(r=>setTimeout(r,75));
-      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1});
+      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
+        type:"mousePressed",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1
+      });
       await new Promise(r=>setTimeout(r,50));
-      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1});
-      await new Promise(r=>setTimeout(r,700));
+      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
+        type:"mouseReleased",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1
+      });
+      await new Promise(r=>setTimeout(r,900));
     }
 
-    const input=await evaluate(flowTab.id,`(() => {
-      const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"&&!el.disabled;};
-      const selectors=['[data-slate-editor="true"]','[contenteditable="true"]','textarea','input[type="text"]'];
-      let candidates=[];
-      for(const selector of selectors){candidates=Array.from(document.querySelectorAll(selector)).filter(visible);if(candidates.length)break;}
-      candidates.sort((a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom);
-      const el=candidates[candidates.length-1];
-      if(!el)return {ok:false,reason:"Flow prompt editor not found",slate:document.querySelectorAll('[data-slate-editor="true"]').length,contenteditable:document.querySelectorAll('[contenteditable="true"]').length,textarea:document.querySelectorAll('textarea').length};
-      el.scrollIntoView({block:"center",inline:"center"});const r=el.getBoundingClientRect();
-      return {ok:true,tag:el.tagName,slate:el.matches('[data-slate-editor="true"]'),aria:el.getAttribute("aria-label")||"",placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",x:r.left+Math.min(r.width/2,300),y:r.top+Math.min(r.height/2,40)};
-    })()`);
-    if(!input?.ok)return {ready:false,reason:JSON.stringify(input||{})};
+    // Current Flow Agent UI: the real prompt is the contenteditable inside
+    // the role=textbox with placeholder "What do you want to create?".
+    const input = await evaluate(flowTab.id, \`(() => {
+      const visible = el => {
+        const r=el.getBoundingClientRect(), s=getComputedStyle(el);
+        return r.width>0 && r.height>0 && s.display!=="none" &&
+          s.visibility!=="hidden" && !el.disabled;
+      };
+
+      const all = Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
+      )).filter(visible);
+
+      const exact = all.find(el => {
+        const text=(el.innerText||el.textContent||"").trim();
+        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
+        const host=el.closest('[role="textbox"]');
+        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
+        return /What do you want to create\\?/i.test(text+" "+p+" "+hp);
+      });
+
+      const textboxChild = all.find(el=>el.closest('[role="textbox"]'));
+      const slate = all.find(el=>el.matches('[data-slate-editor="true"]'));
+
+      const candidates=[exact,textboxChild,slate]
+        .filter(Boolean)
+        .filter((el,index,arr)=>arr.indexOf(el)===index)
+        .sort((a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom);
+
+      const el=candidates[0];
+      if(!el) return {
+        ok:false,
+        reason:"Flow Agent composer not found",
+        contenteditables:document.querySelectorAll('[contenteditable="true"]').length,
+        textboxes:document.querySelectorAll('[role="textbox"]').length,
+        slate:document.querySelectorAll('[data-slate-editor="true"]').length
+      };
+
+      const r=el.getBoundingClientRect();
+      const host=el.closest('[role="textbox"]');
+      const hr=host ? host.getBoundingClientRect() : null;
+      return {
+        ok:true,
+        tag:el.tagName,
+        role:el.getAttribute("role")||"",
+        contenteditable:el.getAttribute("contenteditable")||"",
+        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||
+          (host&&(host.getAttribute("data-placeholder")||host.getAttribute("placeholder")))||"",
+        text:(el.innerText||el.textContent||"").slice(0,300),
+        x:(hr||r).left+Math.min((hr||r).width/2,300),
+        y:(hr||r).top+Math.min((hr||r).height/2,30)
+      };
+    })()\`);
+
+    if(!input?.ok) return {ready:false,reason:JSON.stringify(input||{})};
 
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:input.x,y:input.y});
     await new Promise(r=>setTimeout(r,100));
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mousePressed",x:input.x,y:input.y,button:"left",clickCount:1});
-    await new Promise(r=>setTimeout(r,50));
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseReleased",x:input.x,y:input.y,button:"left",clickCount:1});
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
+      type:"mousePressed",x:input.x,y:input.y,button:"left",clickCount:1
+    });
+    await new Promise(r=>setTimeout(r,60));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
+      type:"mouseReleased",x:input.x,y:input.y,button:"left",clickCount:1
+    });
     await new Promise(r=>setTimeout(r,250));
+
+    // Re-focus the exact Agent composer so Slate owns the active selection.
+    await evaluate(flowTab.id, \`(() => {
+      const candidates=Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"]'
+      )).filter(el=>{
+        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
+      });
+
+      const exact=candidates.find(el=>{
+        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
+        const host=el.closest('[role="textbox"]');
+        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
+        return /What do you want to create\\?/i.test(p+" "+hp);
+      });
+
+      const el=exact||candidates.sort(
+        (a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom
+      )[0];
+
+      if(!el) return false;
+      el.focus();
+      return true;
+    })()\`);
+
+    const active=await evaluate(flowTab.id,\`(() => {
+      const el=document.activeElement;
+      return el ? {
+        tag:el.tagName,
+        role:el.getAttribute("role")||"",
+        contenteditable:el.getAttribute("contenteditable")||"",
+        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
+        text:(el.innerText||el.textContent||"").slice(0,120)
+      } : null;
+    })()\`);
+
+    // Clear only if the active element is the contenteditable composer.
+    if(active && active.contenteditable==="true"){
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyDown",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17
+      });
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyDown",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65
+      });
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyUp",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65
+      });
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyUp",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17
+      });
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyDown",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8
+      });
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+        type:"keyUp",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8
+      });
+      await new Promise(r=>setTimeout(r,150));
+    }
+
     await sendCommand(flowTab.id,"Input.insertText",{text:compiledPrompt});
-    await new Promise(r=>setTimeout(r,600));
+    await new Promise(r=>setTimeout(r,900));
 
-    const verification=await evaluate(flowTab.id,`(() => {
-      const visible=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";};
-      const nodes=Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea,input[type="text"]')).filter(visible);
-      const values=nodes.map(el=>({tag:el.tagName,text:(el.innerText||el.textContent||el.value||"").trim(),placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||""}));
-      const needle=${JSON.stringify(compiledPrompt.slice(0,80))};
-      return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-8)};
-    })()`);
-    if(!verification?.found)return {ready:false,reason:"Flow composer was focused but ChatGPT prompt was not verified after paste.",input,verification};
-    return {ready:true,input,verification,videoModeDeferred:true};
-  } finally { await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{}); }
+    const verification=await evaluate(flowTab.id,\`(() => {
+      const visible=el=>{
+        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
+      };
+      const nodes=Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
+      )).filter(visible);
+      const values=nodes.map(el=>({
+        tag:el.tagName,
+        role:el.getAttribute("role")||"",
+        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
+        text:(el.innerText||el.textContent||"").trim()
+      }));
+      const needle=\${JSON.stringify(compiledPrompt.slice(0,80))};
+      return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-12)};
+    })()\`);
+
+    if(!verification?.found){
+      return {
+        ready:false,
+        reason:"Flow Agent composer was found/focused, but the ChatGPT prompt was not verified after paste.",
+        input,
+        active,
+        verification
+      };
+    }
+
+    return {ready:true,input,active,verification,videoModeDeferred:true};
+  } finally {
+    await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
+  }
 }
-
 async function prepareFlowImage(flowTab, product) {
   const imageData = String(product?.imageData || "");
   const imageUrl = String(product?.image || "");
