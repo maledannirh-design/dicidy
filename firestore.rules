@@ -77,18 +77,16 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'productRadar',
           'contentFactory',
-          'analytics',
-          'advancedAnalytics',
-          'counselling',
           'affiliateTools',
+          'advancedAnalytics',
+          'promptEditor',
           'adminTools'
         ])
         && request.resource.data.productRadar == false
         && request.resource.data.contentFactory == false
-        && request.resource.data.analytics == false
-        && request.resource.data.advancedAnalytics == false
-        && request.resource.data.counselling == false
         && request.resource.data.affiliateTools == false
+        && request.resource.data.advancedAnalytics == false
+        && request.resource.data.promptEditor == false
         && request.resource.data.adminTools == false;
 
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
