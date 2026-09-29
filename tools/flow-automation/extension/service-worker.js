@@ -267,52 +267,103 @@ async function prepareFlow(flowTab, compiledPrompt) {
     const input = await evaluate(
       flowTab.id,
       `(() => {
-        const selectors = [
-          'textarea',
-          '[contenteditable="true"][role="textbox"]',
-          '[contenteditable="true"]',
-          'input[type="text"]'
-        ];
+        const visible = el => {
+          const r = el.getBoundingClientRect();
+          const s = getComputedStyle(el);
+          return r.width > 0 && r.height > 0 &&
+            s.visibility !== "hidden" &&
+            s.display !== "none" &&
+            !el.disabled;
+        };
 
-        for (const selector of selectors) {
-          const nodes = Array.from(document.querySelectorAll(selector));
-          const el = nodes.find(node => {
-            const r = node.getBoundingClientRect();
-            return r.width > 0 && r.height > 0 && !node.disabled;
-          });
-          if (el) {
-            return {
-              tag: el.tagName,
-              aria: el.getAttribute("aria-label") || "",
-              placeholder: el.getAttribute("placeholder") || ""
-            };
-          }
+        const slate = Array.from(document.querySelectorAll('[data-slate-editor="true"]')).filter(visible);
+        const editable = Array.from(document.querySelectorAll('[contenteditable="true"]')).filter(visible);
+        const textarea = Array.from(document.querySelectorAll('textarea')).filter(visible);
+        const el = slate[slate.length - 1] || editable[editable.length - 1] || textarea[textarea.length - 1];
+
+        if (!el) {
+          return {
+            ok: false,
+            reason: "Google Flow Slate prompt editor was not found",
+            slate: slate.length,
+            editable: editable.length,
+            textarea: textarea.length
+          };
         }
 
-        return null;
+        el.scrollIntoView({block:"center", inline:"center"});
+        const r = el.getBoundingClientRect();
+
+        return {
+          ok: true,
+          tag: el.tagName,
+          slate: el.matches('[data-slate-editor="true"]'),
+          aria: el.getAttribute("aria-label") || "",
+          placeholder: el.getAttribute("data-placeholder") || el.getAttribute("placeholder") || "",
+          clickX: r.left + Math.min(r.width / 2, 300),
+          clickY: r.top + Math.min(r.height / 2, 40)
+        };
       })()`
     );
 
-    if (!input) {
+    if (!input || !input.ok) {
+      return { ready: false, reason: JSON.stringify(input || {}) };
+    }
+
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseMoved", x: input.clickX, y: input.clickY
+    });
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mousePressed", x: input.clickX, y: input.clickY,
+      button: "left", clickCount: 1
+    });
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseReleased", x: input.clickX, y: input.clickY,
+      button: "left", clickCount: 1
+    });
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    await sendCommand(flowTab.id, "Input.insertText", { text: compiledPrompt });
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const verification = await evaluate(
+      flowTab.id,
+      `(() => {
+        const els = Array.from(document.querySelectorAll('[data-slate-editor="true"], [contenteditable="true"], textarea'));
+        const visible = els.filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        });
+        const values = visible.map(el => ({
+          tag: el.tagName,
+          text: (el.innerText || el.textContent || el.value || "").trim()
+        }));
+        const needle = ${JSON.stringify(compiledPrompt.slice(0, 80))};
+        return {
+          found: values.some(v => v.text.includes(needle)),
+          values: values.slice(-5)
+        };
+      })()`
+    );
+
+    if (!verification || !verification.found) {
       return {
         ready: false,
-        reason: "Google Flow prompt input was not found. Open a Flow project with the prompt composer visible, then run the one-job handoff again."
+        reason: "Flow editor received the click, but prompt text could not be verified in the editor.",
+        input,
+        verification
       };
     }
 
-    const focused = await focusInput(flowTab.id, "flow");
-    if (!focused) {
-      return { ready: false, reason: "Google Flow input could not be focused." };
-    }
-
-    await typeText(flowTab.id, compiledPrompt);
-
-    return { ready: true, input };
+    return { ready: true, input, verification };
   } finally {
     await chrome.debugger.detach({ tabId: flowTab.id }).catch(() => {});
   }
 }
-
 
 async function generateAndDownloadOne(flowTab) {
   const downloadStartedAt = Date.now();
