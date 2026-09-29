@@ -332,63 +332,132 @@ async function generateAndDownloadOne(flowTab) {
     })()`);
 
     const submitted = await evaluate(flowTab.id, `(() => {
-      const isVisible = node => {
-        const r = node.getBoundingClientRect();
-        return r.width > 0 && r.height > 5 &&
-          !node.disabled &&
-          node.getAttribute("aria-disabled") !== "true";
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.visibility !== "hidden" &&
+          s.display !== "none" &&
+          !el.disabled &&
+          el.getAttribute("aria-disabled") !== "true";
       };
 
-      const inputs = Array.from(document.querySelectorAll(
-        '[data-slate-editor="true"], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]'
-      )).filter(isVisible);
+      const editors = Array.from(document.querySelectorAll(
+        '[data-slate-editor="true"]'
+      )).filter(visible);
 
+      const contenteditables = Array.from(document.querySelectorAll(
+        '[contenteditable="true"]'
+      )).filter(visible);
+
+      const inputs = editors.length ? editors : contenteditables;
       const input = inputs[inputs.length - 1];
-      if (!input) return { ok: false, reason: "prompt input not found" };
 
-      let root = input.parentElement;
-      let hops = 0;
-      const submitIcons = ["arrow_forward", "arrow_upward", "send", "north_east"];
-
-      while (root && root !== document.body && hops < 10) {
-        const buttons = Array.from(root.querySelectorAll('button,[role="button"]')).filter(isVisible);
-        const submit = buttons.find(button => {
-          const icons = Array.from(button.querySelectorAll("i"))
-            .map(i => (i.textContent || "").trim());
-          return icons.some(icon => submitIcons.includes(icon));
-        });
-
-        if (submit) {
-          const r = submit.getBoundingClientRect();
-          return {
-            ok: true,
-            label: [
-              submit.innerText || "",
-              submit.getAttribute("aria-label") || "",
-              submit.getAttribute("title") || "",
-              Array.from(submit.querySelectorAll("i")).map(i => i.textContent.trim()).join(" ")
-            ].join(" ").trim(),
-            icon: Array.from(submit.querySelectorAll("i"))
-              .map(i => i.textContent.trim())
-              .find(icon => submitIcons.includes(icon)) || "",
-            clickX: r.left + r.width / 2,
-            clickY: r.top + r.height / 2,
-            rect: {top:r.top,left:r.left,width:r.width,height:r.height}
-          };
-        }
-
-        root = root.parentElement;
-        hops++;
+      if (!input) {
+        return {
+          ok: false,
+          reason: "Flow Slate/contenteditable editor not found",
+          editorCount: editors.length,
+          contenteditableCount: contenteditables.length
+        };
       }
 
+      const inputRect = input.getBoundingClientRect();
+      const submitIcons = new Set([
+        "arrow_forward",
+        "arrow_upward",
+        "send",
+        "north_east"
+      ]);
+
+      const ancestry = [];
+      let root = input;
+      for (let i = 0; root && root !== document.body && i < 12; i++, root = root.parentElement) {
+        ancestry.push(root);
+      }
+
+      const inspectButtons = container => Array.from(
+        container.querySelectorAll('button,[role="button"]')
+      ).filter(visible).map(button => {
+        const r = button.getBoundingClientRect();
+        const icons = Array.from(button.querySelectorAll("i"))
+          .map(i => (i.textContent || "").trim())
+          .filter(Boolean);
+
+        const label = [
+          button.innerText || "",
+          button.getAttribute("aria-label") || "",
+          button.getAttribute("title") || "",
+          button.getAttribute("data-testid") || "",
+          ...icons
+        ].join(" ").trim();
+
+        const recognizedIcon = icons.find(icon => submitIcons.has(icon)) || "";
+
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const distance = Math.hypot(cx - inputRect.right, cy - inputRect.bottom);
+
+        return {
+          button,
+          label,
+          recognizedIcon,
+          distance,
+          rect: {top:r.top,left:r.left,width:r.width,height:r.height},
+          center: {x:cx,y:cy}
+        };
+      });
+
+      let allCandidates = [];
+
+      for (let level = 0; level < ancestry.length; level++) {
+        const root = ancestry[level];
+        const candidates = inspectButtons(root)
+          .filter(x => x.recognizedIcon)
+          .map(x => ({...x, level}));
+
+        if (candidates.length) {
+          allCandidates = candidates;
+          break;
+        }
+      }
+
+      if (!allCandidates.length) {
+        return {
+          ok: false,
+          reason: "No recognized Flow submit icon found inside Slate editor ancestry",
+          inputRect: {
+            top: inputRect.top,
+            left: inputRect.left,
+            width: inputRect.width,
+            height: inputRect.height
+          },
+          editors: editors.length,
+          contenteditables: contenteditables.length,
+          visibleButtonsNearEditor: inspectButtons(document.body)
+            .filter(x => x.distance < 500)
+            .slice(0, 20)
+            .map(x => ({
+              label:x.label,
+              recognizedIcon:x.recognizedIcon,
+              distance:Math.round(x.distance),
+              rect:x.rect
+            }))
+        };
+      }
+
+      allCandidates.sort((a,b) => a.distance - b.distance);
+      const target = allCandidates[0];
+
       return {
-        ok: false,
-        reason: "Flow submit arrow not found by icon",
-        inputTag: input.tagName,
-        inputRect: (() => {
-          const r = input.getBoundingClientRect();
-          return {top:r.top,left:r.left,width:r.width,height:r.height};
-        })()
+        ok: true,
+        label: target.label,
+        icon: target.recognizedIcon,
+        distance: Math.round(target.distance),
+        ancestryLevel: target.level,
+        clickX: target.center.x,
+        clickY: target.center.y,
+        rect: target.rect
       };
     })()`);
 
@@ -404,6 +473,7 @@ async function generateAndDownloadOne(flowTab) {
       x: submitted.clickX,
       y: submitted.clickY
     });
+    await new Promise(resolve => setTimeout(resolve, 100));
     await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
       type: "mousePressed",
       x: submitted.clickX,
@@ -411,7 +481,7 @@ async function generateAndDownloadOne(flowTab) {
       button: "left",
       clickCount: 1
     });
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 75));
     await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
       type: "mouseReleased",
       x: submitted.clickX,
