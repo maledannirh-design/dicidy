@@ -22,17 +22,17 @@
 <section class="auth-form-card">
 <div class="kicker">REGISTER</div>
 <h2>Create your account.</h2>
-<form>
+<form id="registerForm">
 <div class="form-grid">
-<label>Full Name<input type="text" placeholder="Your name"></label>
-<label>Username<input type="text" placeholder="Choose a username"></label>
-<label>Email<input type="email" placeholder="name@example.com"></label>
-<label>Password<input type="password" placeholder="Create password"></label>
-<label>Confirm Password<input type="password" placeholder="Repeat password"></label>
+<label>Full Name<input id="fullName" type="text" placeholder="Your name" autocomplete="name" required></label>
+<label>Username<input id="username" type="text" placeholder="Choose a username" autocomplete="username" required></label>
+<label>Email<input id="email" type="email" placeholder="name@example.com" autocomplete="email" required></label>
+<label>Password<input id="password" type="password" placeholder="Create password" autocomplete="new-password" minlength="6" required></label>
+<label>Confirm Password<input id="confirmPassword" type="password" placeholder="Repeat password" autocomplete="new-password" minlength="6" required></label>
 </div>
-<button class="auth-button" type="button">CREATE ACCOUNT</button>
+<button class="auth-button" id="registerButton" type="submit">CREATE ACCOUNT</button>
 </form>
-<p class="form-note">After registration, a verification email is required before your application can enter the admin approval queue.</p>
+<p class="form-note" id="registerStatus">After registration, a verification email is required before your application can enter the admin approval queue.</p>
 </section>
 
 <section class="option-grid auth-grid">
@@ -56,5 +56,114 @@
 <div class="auth-note"><strong>Access model:</strong> email verified · admin approved · package controlled · time-limited · renewable</div>
 <a class="back" href="/shop/affiliator/">← Back to Affiliate OS</a>
 </main>
+
+<script type="module">
+import { auth, db } from "../firebase-config.js";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  doc,
+  setDoc,
+  serverTimestamp,
+  writeBatch
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const form = document.getElementById("registerForm");
+const button = document.getElementById("registerButton");
+const status = document.getElementById("registerStatus");
+
+function friendlyError(error) {
+  const map = {
+    "auth/email-already-in-use": "Email ini sudah terdaftar.",
+    "auth/invalid-email": "Format email tidak valid.",
+    "auth/weak-password": "Password minimal 6 karakter.",
+    "auth/network-request-failed": "Koneksi bermasalah. Coba lagi.",
+    "permission-denied": "Database menolak penulisan. Pastikan Firestore Rules sudah dipublish."
+  };
+  return map[error?.code] || error?.message || "Registration gagal.";
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const fullName = document.getElementById("fullName").value.trim();
+  const username = document.getElementById("username").value.trim().toLowerCase();
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+
+  if (!fullName || !username || !email) {
+    status.textContent = "Lengkapi semua field.";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    status.textContent = "Password dan confirm password tidak sama.";
+    return;
+  }
+
+  if (password.length < 6) {
+    status.textContent = "Password minimal 6 karakter.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "CREATING...";
+
+  try {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = credential.user;
+
+    await updateProfile(user, { displayName: fullName });
+
+    const userRef = doc(db, "users", user.uid);
+    const permissionRef = doc(db, "userPermissions", user.uid);
+    const batch = writeBatch(db);
+
+    batch.set(userRef, {
+      fullName,
+      username,
+      email,
+      photoURL: user.photoURL || null,
+      role: "MEMBER",
+      approvalStatus: "PENDING",
+      package: null,
+      emailVerified: false,
+      trialStartedAt: null,
+      trialEndsAt: null,
+      membershipStartedAt: null,
+      membershipExpiresAt: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    batch.set(permissionRef, {
+      productRadar: false,
+      contentFactory: false,
+      analytics: false,
+      advancedAnalytics: false,
+      counselling: false,
+      affiliateTools: false,
+      adminTools: false
+    });
+
+    await batch.commit();
+    await sendEmailVerification(user);
+    await signOut(auth);
+
+    status.textContent = "Account dibuat. Cek email untuk verifikasi. Setelah verified, akun masuk ke antrean approval admin.";
+    form.reset();
+  } catch (error) {
+    status.textContent = friendlyError(error);
+  } finally {
+    button.disabled = false;
+    button.textContent = "CREATE ACCOUNT";
+  }
+});
+</script>
 </body>
 </html>
