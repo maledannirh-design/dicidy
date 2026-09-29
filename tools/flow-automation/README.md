@@ -110,7 +110,7 @@ Product sourcing from TikTok and Shopee remains a separate later phase.
 
 ## Existing Chrome Bridge — first live test
 
-The classic Playwright CDP endpoint is not available in the current Chrome remote-debugging flow, so the project now includes a **Chrome Extension Bridge** using the official `chrome.debugger` API. Chrome documents this API as an alternate transport for Chrome's debugging protocol and it can attach to tabs and evaluate page code. urlChrome debugger API documentationhttps://developer.chrome.com/docs/extensions/reference/api/debugger
+The classic Playwright CDP endpoint is not available in the current Chrome remote-debugging flow, so the project now includes a **Chrome Extension Bridge** using the official `chrome.debugger` API. Chrome documents this API as an alternate transport for Chrome's debugging protocol and it can attach to tabs and evaluate page code. Chrome debugger API documentation: https://developer.chrome.com/docs/extensions/reference/api/debugger
 
 This bridge is intentionally diagnostic first.
 
