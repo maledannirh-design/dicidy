@@ -264,6 +264,48 @@ async function prepareFlow(flowTab, compiledPrompt) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
+    // Google Flow may open on "All media"; the actual prompt composer is under Scenes.
+    const sceneNav = await evaluate(flowTab.id, `(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.visibility !== "hidden" &&
+          s.display !== "none" &&
+          el.getAttribute("aria-disabled") !== "true";
+      };
+      const nodes = Array.from(document.querySelectorAll('button,[role="button"],a'))
+        .filter(visible);
+      const target = nodes.find(el => {
+        const text = [
+          el.innerText || "",
+          el.getAttribute("aria-label") || "",
+          el.getAttribute("title") || ""
+        ].join(" ").trim();
+        return /^Scenes$/i.test(text);
+      });
+      if (!target) return {found:false};
+      const r = target.getBoundingClientRect();
+      return {found:true,x:r.left+r.width/2,y:r.top+r.height/2,label:target.innerText||target.getAttribute("aria-label")||""};
+    })()`);
+
+    if (sceneNav && sceneNav.found) {
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseMoved", x:sceneNav.x, y:sceneNav.y
+      });
+      await new Promise(resolve => setTimeout(resolve, 75));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mousePressed", x:sceneNav.x, y:sceneNav.y,
+        button:"left", clickCount:1
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseReleased", x:sceneNav.x, y:sceneNav.y,
+        button:"left", clickCount:1
+      });
+      await new Promise(resolve => setTimeout(resolve, 700));
+    }
+
     const input = await evaluate(
       flowTab.id,
       `(() => {
