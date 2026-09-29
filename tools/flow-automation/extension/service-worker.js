@@ -320,58 +320,92 @@ async function generateAndDownloadOne(flowTab) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
-    const generationStart = await evaluate(flowTab.id, `(() => {
+    const generationStart = await evaluate(flowTab.id, \`(() => {
       const videos = Array.from(document.querySelectorAll("video")).filter(video => {
         const r = video.getBoundingClientRect();
         return r.width > 120 && r.height > 80;
       });
-
       return {
         videoCount: videos.length,
         sources: videos.map(video => video.currentSrc || video.src || "")
       };
-    })()`);
+    })()\`);
 
-    const clicked = await evaluate(flowTab.id, `(() => {
-      const nodes = Array.from(document.querySelectorAll('button, [role="button"]'));
-      const visible = nodes.filter(node => {
+    const submitted = await evaluate(flowTab.id, \`(() => {
+      const isVisible = node => {
         const r = node.getBoundingClientRect();
         return r.width > 0 && r.height > 0 &&
           !node.disabled &&
           node.getAttribute("aria-disabled") !== "true";
-      });
+      };
 
-      const scored = visible.map(node => {
+      const inputs = Array.from(document.querySelectorAll(
+        'textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"]'
+      )).filter(isVisible);
+
+      const input = inputs[inputs.length - 1];
+      if (!input) return { ok: false, reason: "prompt input not found" };
+
+      const ir = input.getBoundingClientRect();
+
+      const candidates = Array.from(document.querySelectorAll(
+        'button, [role="button"], input[type="submit"]'
+      )).filter(isVisible).map(node => {
+        const r = node.getBoundingClientRect();
         const label = [
           node.innerText || "",
           node.getAttribute("aria-label") || "",
           node.getAttribute("title") || "",
+          node.getAttribute("data-testid") || "",
           node.textContent || ""
         ].join(" ").trim().toLowerCase();
 
-        let score = 0;
-        if (label === "generate") score += 100;
-        if (label.includes("generate")) score += 50;
-        if (label.includes("create")) score += 10;
-        return { node, label, score };
-      }).sort((a, b) => b.score - a.score);
+        const nearComposer =
+          r.top >= ir.top - 180 &&
+          r.bottom <= ir.bottom + 180 &&
+          r.left >= ir.left - 180 &&
+          r.right <= ir.right + 180;
 
-      const target = scored.find(item => item.score >= 50);
+        let score = 0;
+        if (nearComposer) score += 50;
+        if (label.includes("send")) score += 20;
+        if (label.includes("submit")) score += 20;
+        if (label.includes("generate")) score += 20;
+        if (label.includes("create")) score += 10;
+        if (label.includes("arrow")) score += 10;
+        if (node.querySelector("svg")) score += 5;
+
+        return { node, label, score, nearComposer, top:r.top, left:r.left };
+      }).sort((a,b) => b.score - a.score);
+
+      const target = candidates.find(x => x.nearComposer && x.score >= 55)
+        || candidates.find(x => x.nearComposer && x.score >= 50);
+
       if (!target) {
         return {
           ok: false,
-          candidates: scored.slice(0, 15).map(x => x.label)
+          reason: "composer submit button not found",
+          inputRect: {top:ir.top,left:ir.left,width:ir.width,height:ir.height},
+          candidates: candidates.slice(0,20).map(x => ({
+            label:x.label, score:x.score, nearComposer:x.nearComposer,
+            top:x.top,left:x.left
+          }))
         };
       }
 
       target.node.click();
-      return { ok: true, label: target.label };
-    })()`);
+      return {
+        ok: true,
+        label: target.label,
+        score: target.score,
+        nearComposer: target.nearComposer
+      };
+    })()\`);
 
-    if (!clicked || !clicked.ok) {
+    if (!submitted || !submitted.ok) {
       throw new Error(
-        "Google Flow Generate button was not found. Candidates: " +
-        JSON.stringify(clicked && clicked.candidates || [])
+        "Google Flow prompt submit button was not found. Details: " +
+        JSON.stringify(submitted || {})
       );
     }
 
@@ -379,7 +413,7 @@ async function generateAndDownloadOne(flowTab) {
     let lastState = null;
 
     while (Date.now() - generationWaitStarted < 600000) {
-      lastState = await evaluate(flowTab.id, `(() => {
+      lastState = await evaluate(flowTab.id, \`(() => {
         const videos = Array.from(document.querySelectorAll("video")).filter(video => {
           const r = video.getBoundingClientRect();
           return r.width > 120 && r.height > 80;
@@ -398,37 +432,34 @@ async function generateAndDownloadOne(flowTab) {
 
         const readyVideo = candidates.find(video => {
           const isNew = video.src && !baselineSources.includes(video.src);
-          const isPlayable = Number.isFinite(video.duration) &&
-            video.duration > 0 &&
-            video.readyState >= 2;
-          return isPlayable && (candidates.length > baselineCount || isNew);
+          const playable = Number.isFinite(video.duration) &&
+            video.duration > 0 && video.readyState >= 2;
+          return playable && (candidates.length > baselineCount || isNew);
         });
 
-        const bodyText = (document.body?.innerText || "");
-        const lower = bodyText.toLowerCase();
-
+        const bodyText = document.body?.innerText || "";
         return {
           videoCount: videos.length,
           ready: Boolean(readyVideo),
           duration: readyVideo ? readyVideo.duration : 0,
           source: readyVideo ? readyVideo.src : "",
-          hasDownload: lower.includes("download"),
-          bodySample: bodyText.slice(-1200),
-          candidates
+          bodySample: bodyText.slice(-1200)
         };
-      })()`);
+      })()\`);
 
       if (lastState && lastState.ready) {
-        const downloadClicked = await evaluate(flowTab.id, `(() => {
-          const nodes = Array.from(document.querySelectorAll('button, [role="button"], a'));
-          const visible = nodes.filter(node => {
+        const downloadClicked = await evaluate(flowTab.id, \`(() => {
+          const isVisible = node => {
             const r = node.getBoundingClientRect();
             return r.width > 0 && r.height > 0 &&
               !node.disabled &&
               node.getAttribute("aria-disabled") !== "true";
-          });
+          };
 
-          const scored = visible.map(node => {
+          const nodes = Array.from(document.querySelectorAll('button, [role="button"], a'))
+            .filter(isVisible);
+
+          const scored = nodes.map(node => {
             const label = [
               node.innerText || "",
               node.getAttribute("aria-label") || "",
@@ -439,20 +470,20 @@ async function generateAndDownloadOne(flowTab) {
             let score = 0;
             if (label === "download") score += 100;
             if (label.includes("download")) score += 50;
-            return { node, label, score };
-          }).sort((a, b) => b.score - a.score);
+            return {node,label,score};
+          }).sort((a,b) => b.score-a.score);
 
-          const target = scored.find(item => item.score >= 50);
+          const target = scored.find(x => x.score >= 50);
           if (!target) {
             return {
-              ok: false,
-              candidates: scored.slice(0, 20).map(x => x.label)
+              ok:false,
+              candidates:scored.slice(0,20).map(x => x.label)
             };
           }
 
           target.node.click();
-          return { ok: true, label: target.label };
-        })()`);
+          return {ok:true,label:target.label};
+        })()\`);
 
         if (!downloadClicked || !downloadClicked.ok) {
           throw new Error(
@@ -462,11 +493,10 @@ async function generateAndDownloadOne(flowTab) {
         }
 
         const file = await waitForNewDownload(downloadStartedAt);
-
         return {
-          generated: clicked,
-          video: lastState,
-          download: downloadClicked,
+          submitted,
+          video:lastState,
+          download:downloadClicked,
           file
         };
       }
