@@ -106,3 +106,67 @@ After one successful existing-Chrome handoff is observed:
 7. Then expand from one job to the selected 1–5 video queue.
 
 Product sourcing from TikTok and Shopee remains a separate later phase.
+
+
+## Existing Chrome Bridge — first live test
+
+The classic Playwright CDP endpoint is not available in the current Chrome remote-debugging flow, so the project now includes a **Chrome Extension Bridge** using the official `chrome.debugger` API. Chrome documents this API as an alternate transport for Chrome's debugging protocol and it can attach to tabs and evaluate page code. urlChrome debugger API documentationhttps://developer.chrome.com/docs/extensions/reference/api/debugger
+
+This bridge is intentionally diagnostic first.
+
+### Files
+
+- `extension/` — unpacked Chrome MV3 extension.
+- `bridge-server.mjs` — optional local HTTP logger on `127.0.0.1:8787`.
+- `bridge-diagnostic.json` — local result file; do not commit it.
+
+### Install the local extension
+
+1. Keep the **same Chrome profile** open where you already have:
+   - the ChatGPT room **DICIDY VIDEO PROMPT ENGINE**
+   - Google Flow
+2. Open:
+   `chrome://extensions`
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select:
+   `tools/flow-automation/extension/`
+6. Pin **DICIDY Flow Automation Bridge** to the toolbar.
+
+The extension requests the `debugger` permission. This is intentionally powerful: it allows the extension to attach to selected tabs and interact with the page through Chrome's debugging protocol. It does not export your passwords or copy your Chrome profile.
+
+### Run the first diagnostic
+
+In PowerShell, from `tools/flow-automation`:
+
+```
+npm run bridge
+```
+
+Then click the extension icon and choose:
+
+**TEST EXISTING CHROME**
+
+The diagnostic looks specifically for:
+
+- ChatGPT tab title containing **DICIDY VIDEO PROMPT ENGINE**
+- a Google Flow tab on `flow.google`
+
+It attaches to each matching tab, reads only basic page state (title, URL, readyState and a short body-text sample), then immediately detaches.
+
+**It does not type a prompt, click Generate, download anything, or change the page.**
+
+A successful test produces `bridge-diagnostic.json` locally and prints the result in the extension popup and terminal.
+
+### Next phase
+
+Only after this diagnostic succeeds:
+
+1. connect the Content Factory job queue to the bridge;
+2. send one compiled prompt into the dedicated ChatGPT room;
+3. hand the result to Google Flow;
+4. manually verify one generation;
+5. automate Generate and completion detection;
+6. then expand to the selected 1–5 video queue.
+
+TikTok/Shopee product sourcing stays as the later phase.
