@@ -519,6 +519,89 @@ async function testFlowDirectInput() {
       };
     })()`);
 
+    // Force the generation surface to VIDEO before focusing the prompt.
+    // Flow's current composer exposes this through generation settings.
+    const videoMode = await evaluate(flowTab.id, `(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.display !== "none" && s.visibility !== "hidden" &&
+          el.getAttribute("aria-disabled") !== "true" && !el.disabled;
+      };
+      const label = el => [
+        el.innerText || "",
+        el.getAttribute("aria-label") || "",
+        el.getAttribute("title") || "",
+        el.getAttribute("data-testid") || ""
+      ].join(" ").trim();
+
+      const all = Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"]')).filter(visible);
+
+      // If a visible exact "Video" choice is already present, select it.
+      let video = all.find(el => /^Video$/i.test((el.innerText || "").trim()));
+      if (video) {
+        const r = video.getBoundingClientRect();
+        return {action:"click-video",x:r.left+r.width/2,y:r.top+r.height/2,label:label(video)};
+      }
+
+      // Otherwise open generation settings (the sliders/tune control near the composer).
+      const settings = all.find(el => /generation settings|settings|tune|sliders/i.test(label(el)));
+      if (!settings) return {action:"none",reason:"Video option/settings control not visible yet."};
+
+      const r = settings.getBoundingClientRect();
+      return {action:"open-settings",x:r.left+r.width/2,y:r.top+r.height/2,label:label(settings)};
+    })()`);
+
+    if (videoMode && videoMode.action !== "none") {
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseMoved", x:videoMode.x, y:videoMode.y
+      });
+      await new Promise(resolve => setTimeout(resolve, 75));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mousePressed", x:videoMode.x, y:videoMode.y,
+        button:"left", clickCount:1
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseReleased", x:videoMode.x, y:videoMode.y,
+        button:"left", clickCount:1
+      });
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // If settings was opened, now explicitly select Video.
+      if (videoMode.action === "open-settings") {
+        const videoChoice = await evaluate(flowTab.id, `(() => {
+          const visible = el => {
+            const r=el.getBoundingClientRect();
+            const s=getComputedStyle(el);
+            return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled;
+          };
+          const nodes=Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"]')).filter(visible);
+          const el=nodes.find(n => /^Video$/i.test((n.innerText||"").trim()));
+          if(!el) return null;
+          const r=el.getBoundingClientRect();
+          return {x:r.left+r.width/2,y:r.top+r.height/2,label:n.innerText||""};
+        })()`);
+        if (videoChoice) {
+          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+            type:"mouseMoved", x:videoChoice.x, y:videoChoice.y
+          });
+          await new Promise(resolve => setTimeout(resolve, 75));
+          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+            type:"mousePressed", x:videoChoice.x, y:videoChoice.y,
+            button:"left", clickCount:1
+          });
+          await new Promise(resolve => setTimeout(resolve, 50));
+          await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+            type:"mouseReleased", x:videoChoice.x, y:videoChoice.y,
+            button:"left", clickCount:1
+          });
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    }
+
     const input = await evaluate(flowTab.id, `(() => {
       const visible = el => {
         const r = el.getBoundingClientRect();
