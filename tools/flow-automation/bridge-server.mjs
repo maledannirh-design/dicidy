@@ -51,6 +51,38 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  if (req.method === "POST" && req.url === "/api/image-file") {
+    let raw = "";
+    req.on("data", chunk => {
+      raw += chunk;
+      if (raw.length > 20_000_000) req.destroy();
+    });
+    req.on("end", () => {
+      try {
+        const body = JSON.parse(raw || "{}");
+        const dataUrl = String(body.dataUrl || "");
+        const fileName = String(body.fileName || "product-image");
+        const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) return send(res, 400, { ok:false, error:"Invalid image data URL." });
+
+        const mime = match[1].toLowerCase();
+        const ext = mime.includes("png") ? "png" :
+          mime.includes("webp") ? "webp" :
+          mime.includes("gif") ? "gif" : "jpg";
+        const safeBase = fileName.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.[^.]+$/, "") || "product-image";
+        const assetDir = path.join(ROOT, "assets");
+        fs.mkdirSync(assetDir, { recursive:true });
+        const filePath = path.join(assetDir, `${Date.now()}-${safeBase}.${ext}`);
+        fs.writeFileSync(filePath, Buffer.from(match[2], "base64"));
+        console.log("\n[DICIDY BRIDGE] Product image staged:", filePath);
+        return send(res, 200, { ok:true, path:filePath, mime, size:fs.statSync(filePath).size });
+      } catch (error) {
+        return send(res, 400, { ok:false, error:error.message });
+      }
+    });
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/api/result") {
     let raw = "";
 
@@ -107,6 +139,6 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log("[DICIDY BRIDGE] Local server running.");
   console.log("[DICIDY BRIDGE] http://127.0.0.1:" + PORT);
-  console.log("[DICIDY BRIDGE] Available: /api/health /api/job /api/result /api/diagnostic");
+  console.log("[DICIDY BRIDGE] Available: /api/health /api/job /api/result /api/diagnostic /api/image-file");
   console.log("[DICIDY BRIDGE] One-job mode does not click Generate.");
 });
