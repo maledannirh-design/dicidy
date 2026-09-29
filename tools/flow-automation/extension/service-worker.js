@@ -1,5 +1,8 @@
 const CHAT_TITLE = "DICIDY VIDEO PROMPT ENGINE";
-const FLOW_HOST = "flow.google";
+const FLOW_PATTERNS = [
+  /^https?:\/\/flow\\.google\\//i,
+  /^https?:\/\/labs\\.google\\/fx\\/tools\\/flow/i
+];
 const BRIDGE_URL = "http://127.0.0.1:8787";
 
 async function evaluate(tabId, expression) {
