@@ -52,7 +52,10 @@ async function findTargets() {
   );
   const flow = tabs.find(tab =>
     typeof tab.url === "string" &&
-    /^https?:\/\/flow\.google\//i.test(tab.url)
+    (
+      /^https?:\/\/flow\.google\.com\/?/i.test(tab.url) ||
+      /^https?:\/\/labs\.google\.com\/fx\/tools\/flow/i.test(tab.url)
+    )
   );
 
   return { tabs, chat, flow };
