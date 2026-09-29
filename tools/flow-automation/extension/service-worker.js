@@ -581,7 +581,7 @@ async function testFlowDirectInput() {
           const el=nodes.find(n => /^Video$/i.test((n.innerText||"").trim()));
           if(!el) return null;
           const r=el.getBoundingClientRect();
-          return {x:r.left+r.width/2,y:r.top+r.height/2,label:n.innerText||""};
+          return {x:r.left+r.width/2,y:r.top+r.height/2,label:el.innerText||""};
         })()`);
         if (videoChoice) {
           await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
