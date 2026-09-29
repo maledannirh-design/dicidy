@@ -1,5 +1,5 @@
 const CHAT_TITLE = "DICIDY VIDEO PROMPT ENGINE";
-const FLOW_HOSTS = ["flow.google.com", "labs.google.com"];
+const FLOW_HOSTS = ["flow.google.com", "labs.google"];
 const BRIDGE_URL = "http://127.0.0.1:8787";
 
 async function sendCommand(tabId, method, params = {}) {
