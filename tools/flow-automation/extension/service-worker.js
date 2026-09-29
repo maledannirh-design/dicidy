@@ -506,16 +506,6 @@ async function waitForNewDownload(startTimeMs, timeoutMs = 120000) {
   throw new Error("Timed out waiting for the downloaded video file.");
 }
 
-async function generateAndDownloadOne(flowTab) {
-  const downloadStartedAt = Date.now();
-  const generated = await clickFlowGenerate(flowTab.id);
-  const video = await waitForFlowVideo(flowTab.id);
-  const download = await clickFlowDownload(flowTab.id);
-  const file = await waitForNewDownload(downloadStartedAt);
-
-  return { generated, video, download, file };
-}
-
 async function runOneJob() {
   const jobResponse = await bridgeRequest("/api/job");
   const job = jobResponse.job;
