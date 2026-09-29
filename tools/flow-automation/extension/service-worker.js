@@ -818,6 +818,111 @@ async function generateAndDownloadOne(flowTab) {
       clickCount: 1
     });
 
+    // Flow may ask for generation confirmation/credit approval.
+    // Only auto-approve when the visible dialog explicitly says it is
+    // starting this video generation. Then select "Always approve" and
+    // confirm with "Approve".
+    const approval = await evaluate(flowTab.id, `(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.display !== "none" && s.visibility !== "hidden";
+      };
+      const body = (document.body?.innerText || "").toLowerCase();
+      const isGenerationDialog =
+        body.includes("would you like me to kick off") &&
+        body.includes("video generation") &&
+        body.includes("approve");
+
+      if (!isGenerationDialog) return {needed:false};
+
+      const nodes = Array.from(document.querySelectorAll('button,[role="button"],[role="option"],label')).filter(visible);
+      const findByText = text => nodes.find(el => {
+        const value = [
+          el.innerText || "",
+          el.getAttribute("aria-label") || "",
+          el.getAttribute("title") || ""
+        ].join(" ").trim();
+        return new RegExp("^" + text + "$","i").test(value);
+      });
+
+      const always = findByText("Always approve");
+      const approve = findByText("Approve");
+
+      const pick = always || approve;
+      if (!pick) {
+        return {
+          needed:true,
+          ok:false,
+          reason:"Generation approval dialog detected, but approval controls were not found."
+        };
+      }
+
+      const r = pick.getBoundingClientRect();
+      return {
+        needed:true,
+        ok:true,
+        action:always ? "always-approve" : "approve",
+        x:r.left+r.width/2,
+        y:r.top+r.height/2
+      };
+    })()`);
+
+    if (approval && approval.needed) {
+      if (!approval.ok) {
+        throw new Error(approval.reason);
+      }
+
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseMoved", x:approval.x, y:approval.y
+      });
+      await new Promise(resolve => setTimeout(resolve, 75));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mousePressed", x:approval.x, y:approval.y,
+        button:"left", clickCount:1
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+        type:"mouseReleased", x:approval.x, y:approval.y,
+        button:"left", clickCount:1
+      });
+
+      if (approval.action === "always-approve") {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        const confirm = await evaluate(flowTab.id, `(() => {
+          const visible = el => {
+            const r=el.getBoundingClientRect();
+            const s=getComputedStyle(el);
+            return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
+          };
+          const nodes=Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
+          const el=nodes.find(n => /^Approve$/i.test((n.innerText||"").trim()));
+          if(!el) return null;
+          const r=el.getBoundingClientRect();
+          return {x:r.left+r.width/2,y:r.top+r.height/2};
+        })()`);
+
+        if (!confirm) {
+          throw new Error("Always approve was selected, but the final Approve button was not found.");
+        }
+
+        await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+          type:"mouseMoved", x:confirm.x, y:confirm.y
+        });
+        await new Promise(resolve => setTimeout(resolve, 75));
+        await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+          type:"mousePressed", x:confirm.x, y:confirm.y,
+          button:"left", clickCount:1
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+        await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+          type:"mouseReleased", x:confirm.x, y:confirm.y,
+          button:"left", clickCount:1
+        });
+      }
+    }
+
     const generationWaitStarted = Date.now();
     let lastState = null;
 
