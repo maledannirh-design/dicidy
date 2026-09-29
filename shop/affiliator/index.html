@@ -1,1 +1,36 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BelanjaBagus Affiliate OS</title><link rel="stylesheet" href="/styles.css"></head><body><main class="subpage"><header class="topbar"><a class="brand" href="/">DICIDY</a><div class="tagline">BELANJABAGUS AFFILIATE OS</div></header><section class="subhero"><div class="kicker">SHOP / AFFILIATOR</div><h1>AFFILIATE OS.</h1><p>Central workspace for product radar, affiliate links, content production, publishing queue and performance analytics.</p></section><section class="option-grid"><a class="option" href="/shop/affiliator/radar/"><h2>Product Radar</h2><p>Trending products, offers, commissions and selected opportunities.</p></a><div class="option"><h2>Content Factory</h2><p>Scripts, captions, creative assets and AI video workflow.</p></div><div class="option"><h2>Analytics</h2><p>Views → clicks → orders → products sold → commission.</p></div><a class="option" href="/shop/affiliator/auth/"><h2>Member Access</h2><p>Register, verify email, approval and choose your Affiliate OS access package.</p></a></section><a class="back" href="/shop/">← Back to Shop</a></main></body></html>
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BelanjaBagus Affiliate OS</title><link rel="stylesheet" href="/styles.css"></head>
+<body>
+<main class="subpage">
+<header class="topbar"><a class="brand" href="/">DICIDY</a><div class="tagline">BELANJABAGUS AFFILIATE OS</div></header>
+<section class="subhero"><div class="kicker">SHOP / AFFILIATOR</div><h1>AFFILIATE OS.</h1><p>Central workspace for product radar, affiliate links, content production, publishing queue and performance analytics.</p></section>
+<section class="option-grid">
+<a class="option" href="/shop/affiliator/radar/"><h2>Product Radar</h2><p>Trending products, offers, commissions and selected opportunities.</p></a>
+<div class="option"><h2>Content Factory</h2><p>Scripts, captions, creative assets and AI video workflow.</p></div>
+<div class="option"><h2>Analytics</h2><p>Views → clicks → orders → products sold → commission.</p></div>
+</section>
+<div class="member-access-strip"><div><div class="kicker">MEMBER ACCESS</div><strong>Login to enter Affiliate OS</strong><span>30-day free trial · approval required · package controlled</span></div><button class="auth-button" id="openLogin">LOGIN</button></div>
+<a class="back" href="/shop/">← Back to Shop</a>
+</main>
+
+<div class="login-overlay" id="loginModal" aria-hidden="false">
+<div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+<button class="modal-close" id="closeLogin" aria-label="Close">×</button>
+<div class="kicker">DICIDY / MEMBER ACCESS</div><h2 id="loginTitle">Welcome back.</h2><p>Login to access your Affiliate OS workspace.</p>
+<form>
+<label>Email or Username<input type="text" placeholder="username or email"></label>
+<label>Password<input type="password" placeholder="Password"></label>
+<button class="auth-button login-submit" type="button">LOGIN</button>
+</form>
+<div class="login-divider"><span>NEW MEMBER?</span></div>
+<a class="register-link" href="/shop/affiliator/auth/">REGISTER</a>
+<div class="login-note">Email verification and administrator approval are required before protected tools can be opened.</div>
+</div>
+</div>
+<script>
+const modal=document.getElementById('loginModal');
+document.getElementById('openLogin').addEventListener('click',()=>modal.classList.add('hidden'));
+document.getElementById('closeLogin').addEventListener('click',()=>modal.classList.add('hidden'));
+</script>
+</body></html>
