@@ -1,5 +1,6 @@
 const testButton = document.getElementById("test");
 const runButton = document.getElementById("run");
+const directButton = document.getElementById("direct");
 const output = document.getElementById("result");
 
 async function send(type) {
@@ -9,6 +10,7 @@ async function send(type) {
 testButton.addEventListener("click", async () => {
   testButton.disabled = true;
   runButton.disabled = true;
+  directButton.disabled = true;
   output.textContent = "Running existing Chrome diagnostic…";
 
   try {
@@ -18,6 +20,24 @@ testButton.addEventListener("click", async () => {
     output.textContent = "ERROR: " + error.message;
   } finally {
     testButton.disabled = false;
+    runButton.disabled = false;
+    directButton.disabled = false;
+  }
+});
+
+directButton.addEventListener("click", async () => {
+  testButton.disabled = true;
+  directButton.disabled = true;
+  runButton.disabled = true;
+  output.textContent = "Testing direct CDP text input into Flow…";
+  try {
+    const result = await send("DICIDY_TEST_FLOW_DIRECT");
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    output.textContent = "ERROR: " + error.message;
+  } finally {
+    testButton.disabled = false;
+    directButton.disabled = false;
     runButton.disabled = false;
   }
 });
