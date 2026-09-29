@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    match /users/{userId} {
+      // A new account can create only its own safe, pending MEMBER profile.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'fullName',
+          'username',
+          'email',
+          'photoURL',
+          'role',
+          'approvalStatus',
+          'package',
+          'emailVerified',
+          'trialStartedAt',
+          'trialEndsAt',
+          'membershipStartedAt',
+          'membershipExpiresAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.fullName is string
+        && request.resource.data.username is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'MEMBER'
+        && request.resource.data.approvalStatus == 'PENDING'
+        && request.resource.data.package == null
+        && request.resource.data.emailVerified == false
+        && request.resource.data.trialStartedAt == null
+        && request.resource.data.trialEndsAt == null
+        && request.resource.data.membershipStartedAt == null
+        && request.resource.data.membershipExpiresAt == null;
+
+      // Members can read their own profile. Admins can read all member profiles.
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Members may only sync verification/profile-safe fields.
+      // Membership, role, package and approval fields remain admin-controlled.
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'emailVerified',
+            'photoURL',
+            'updatedAt'
+          ])
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.approvalStatus == resource.data.approvalStatus
+          && request.resource.data.package == resource.data.package
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /userPermissions/{userId} {
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'productRadar',
+          'contentFactory',
+          'analytics',
+          'advancedAnalytics',
+          'counselling',
+          'affiliateTools',
+          'adminTools'
+        ])
+        && request.resource.data.productRadar == false
+        && request.resource.data.contentFactory == false
+        && request.resource.data.analytics == false
+        && request.resource.data.advancedAnalytics == false
+        && request.resource.data.counselling == false
+        && request.resource.data.affiliateTools == false
+        && request.resource.data.adminTools == false;
+
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // Everything else stays closed until a specific collection is designed and secured.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
