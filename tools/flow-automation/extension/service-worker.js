@@ -265,7 +265,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
 
   try {
     // Flow's Agent composer only appears reliably after entering Scenes.
-    const sceneNav = await evaluate(flowTab.id, \`(() => {
+    const sceneNav = await evaluate(flowTab.id, `(() => {
       const visible = el => {
         const r = el.getBoundingClientRect();
         const s = getComputedStyle(el);
@@ -285,7 +285,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
       if (!target) return { found:false };
       const r = target.getBoundingClientRect();
       return { found:true, x:r.left+r.width/2, y:r.top+r.height/2 };
-    })()\`);
+    })()`);
 
     if (sceneNav?.found) {
       await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:sceneNav.x,y:sceneNav.y});
@@ -302,7 +302,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
 
     // Current Flow Agent UI: the real prompt is the contenteditable inside
     // the role=textbox with placeholder "What do you want to create?".
-    const input = await evaluate(flowTab.id, \`(() => {
+    const input = await evaluate(flowTab.id, `(() => {
       const visible = el => {
         const r=el.getBoundingClientRect(), s=getComputedStyle(el);
         return r.width>0 && r.height>0 && s.display!=="none" &&
@@ -355,7 +355,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
         x:(hr||r).left+Math.min((hr||r).width/2,300),
         y:(hr||r).top+Math.min((hr||r).height/2,30)
       };
-    })()\`);
+    })()`);
 
     if(!input?.ok) return {ready:false,reason:JSON.stringify(input||{})};
 
@@ -371,7 +371,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
     await new Promise(r=>setTimeout(r,250));
 
     // Re-focus the exact Agent composer so Slate owns the active selection.
-    await evaluate(flowTab.id, \`(() => {
+    await evaluate(flowTab.id, `(() => {
       const candidates=Array.from(document.querySelectorAll(
         '[role="textbox"][contenteditable="true"],' +
         '[role="textbox"] [contenteditable="true"],' +
@@ -395,9 +395,9 @@ async function prepareFlow(flowTab, compiledPrompt) {
       if(!el) return false;
       el.focus();
       return true;
-    })()\`);
+    })()`);
 
-    const active=await evaluate(flowTab.id,\`(() => {
+    const active=await evaluate(flowTab.id,`(() => {
       const el=document.activeElement;
       return el ? {
         tag:el.tagName,
@@ -406,7 +406,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
         placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
         text:(el.innerText||el.textContent||"").slice(0,120)
       } : null;
-    })()\`);
+    })()`);
 
     // Clear only if the active element is the contenteditable composer.
     if(active && active.contenteditable==="true"){
@@ -434,7 +434,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
     await sendCommand(flowTab.id,"Input.insertText",{text:compiledPrompt});
     await new Promise(r=>setTimeout(r,900));
 
-    const verification=await evaluate(flowTab.id,\`(() => {
+    const verification=await evaluate(flowTab.id,`(() => {
       const visible=el=>{
         const r=el.getBoundingClientRect(),s=getComputedStyle(el);
         return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
@@ -451,9 +451,9 @@ async function prepareFlow(flowTab, compiledPrompt) {
         placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
         text:(el.innerText||el.textContent||"").trim()
       }));
-      const needle=\${JSON.stringify(compiledPrompt.slice(0,80))};
+      const needle=${JSON.stringify(compiledPrompt.slice(0,80))};
       return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-12)};
-    })()\`);
+    })()`);
 
     if(!verification?.found){
       return {
