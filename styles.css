@@ -30,3 +30,18 @@ h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(42px,6vw,78px);line
 footer{display:flex;justify-content:space-between;padding:28px 4px 0;color:#777;font-size:9px;letter-spacing:.2em;text-transform:uppercase}
 @media(max-width:600px){.page{padding:18px 14px}.topbar{align-items:flex-start}.tagline{display:none}.hero{padding:35px 0 22px}.carousel{gap:7px}.carousel-stage{width:min(310px,78vw);height:min(480px,68vh);min-height:390px}.carousel-arrow{width:40px;height:40px;font-size:28px}.card-label{font-size:11px;padding:32px 8px 14px}.swipe-hint{font-size:8px}footer{font-size:8px}}
 @media(min-width:1400px){.carousel-stage{width:410px;height:600px}}
+
+
+.subpage{max-width:1050px;margin:0 auto;padding:28px}
+.subhero{text-align:center;padding:70px 0 45px}
+.subhero h1{font-size:clamp(44px,7vw,82px)}
+.subhero p{max-width:680px;margin:22px auto 0;color:var(--muted);line-height:1.7}
+.option-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.option{padding:28px;border:1px solid var(--line);background:linear-gradient(145deg,#141414,#0d0d0d);min-height:180px;transition:.2s}
+.option:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.45)}
+.option h2{font-family:Georgia,serif;font-weight:400;margin:0 0 12px}
+.option p{color:var(--muted);line-height:1.6;font-size:14px}
+.kicker{font-size:10px;letter-spacing:.3em;color:#aaa;text-transform:uppercase}
+.back{display:inline-block;margin-top:35px;color:#aaa;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+@media(max-width:1000px){.option-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.subpage{padding:18px 14px}.subhero{padding:45px 0 30px}.option{min-height:auto}}
