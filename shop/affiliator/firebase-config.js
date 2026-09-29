@@ -3,7 +3,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-aut
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCptCZvEL_rmxrRr3Rxjr_-FLb251jQd8nI",
+  apiKey: "AIzaSyAZHGmWerGgaM8jVNfvQTBJSy7T-cEtasY",
   authDomain: "dicidy.firebaseapp.com",
   projectId: "dicidy",
   storageBucket: "dicidy.firebasestorage.app",
