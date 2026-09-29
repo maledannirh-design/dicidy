@@ -306,6 +306,117 @@ async function prepareFlow(flowTab, compiledPrompt) {
       await new Promise(resolve => setTimeout(resolve, 700));
     }
 
+    // Lock the Flow composer to the VIDEO generation surface.
+    // Flow can open on image/all-media context; do not continue unless Video is selected.
+    const clickPoint = async point => {
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {type:"mouseMoved", x:point.x, y:point.y});
+      await new Promise(resolve => setTimeout(resolve, 75));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {type:"mousePressed", x:point.x, y:point.y, button:"left", clickCount:1});
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {type:"mouseReleased", x:point.x, y:point.y, button:"left", clickCount:1});
+    };
+
+    const ensureFlowVideoMode = async () => {
+      const state = await evaluate(flowTab.id, `(() => {
+        const visible = el => {
+          const r = el.getBoundingClientRect();
+          const s = getComputedStyle(el);
+          return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden" && !el.disabled;
+        };
+        const label = el => [
+          el.innerText || "", el.getAttribute("aria-label") || "",
+          el.getAttribute("title") || "", el.getAttribute("data-testid") || "",
+          ...Array.from(el.querySelectorAll("i")).map(i => i.textContent || "")
+        ].join(" ").trim();
+        const buttons = Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
+        const editors = Array.from(document.querySelectorAll('[data-slate-editor="true"],[contenteditable="true"],textarea')).filter(visible);
+        const editor = editors[editors.length - 1];
+        if (!editor) return {ok:false,reason:"editor-not-found"};
+        let root = editor;
+        const roots = [];
+        for (let i=0; root && root !== document.body && i<10; i++,root=root.parentElement) roots.push(root);
+        const scoped = roots.flatMap(r => Array.from(r.querySelectorAll('button,[role="button"]')).filter(visible));
+        const pool = scoped.length ? scoped : buttons;
+        const video = pool.find(el => /^Video$/i.test((el.innerText || "").trim()) || /(^|\\s)video(\\s|$)/i.test(label(el)));
+        const image = pool.find(el => /^Image$/i.test((el.innerText || "").trim()));
+        const settings = pool.find(el => /generation settings|settings|tune|sliders/i.test(label(el)));
+        const ratio916 = pool.find(el => /^9:16$/i.test((el.innerText || "").trim()) || /9:16/.test(label(el)));
+        const vr = video?.getBoundingClientRect();
+        const sr = settings?.getBoundingClientRect();
+        const rr = ratio916?.getBoundingClientRect();
+        return {
+          ok:true,
+          video:video ? {text:(video.innerText||"").trim(),aria:video.getAttribute("aria-label")||"",pressed:video.getAttribute("aria-pressed"),selected:video.getAttribute("aria-selected"),x:vr.left+vr.width/2,y:vr.top+vr.height/2}:null,
+          image:image ? {text:(image.innerText||"").trim()}:null,
+          settings:settings ? {label:label(settings),x:sr.left+sr.width/2,y:sr.top+sr.height/2}:null,
+          ratio916:ratio916 ? {x:rr.left+rr.width/2,y:rr.top+rr.height/2}:null,
+          editorRect:(()=>{const r=editor.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height}})()
+        };
+      })()`);
+
+      if (!state?.ok) throw new Error("Flow video-mode check failed: " + JSON.stringify(state));
+
+      // If Video is visible in the composer/menu, select it directly.
+      if (state.video) {
+        await clickPoint({x:state.video.x,y:state.video.y});
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else if (state.settings) {
+        // Open only the settings control belonging to the prompt composer.
+        await clickPoint({x:state.settings.x,y:state.settings.y});
+        await new Promise(resolve => setTimeout(resolve, 400));
+      } else {
+        throw new Error("Flow Video mode could not be located. Composer settings control was not found.");
+      }
+
+      const afterOpen = await evaluate(flowTab.id, `(() => {
+        const visible = el => { const r=el.getBoundingClientRect(); const s=getComputedStyle(el); return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled; };
+        const nodes=Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"],[role="option"]')).filter(visible);
+        const find=text=>nodes.find(el=>new RegExp("^"+text+"$","i").test((el.innerText||"").trim()));
+        const video=find("Video");
+        const ratio=find("9:16");
+        const r1=video?.getBoundingClientRect(),r2=ratio?.getBoundingClientRect();
+        return {
+          video:video?{x:r1.left+r1.width/2,y:r1.top+r1.height/2,pressed:video.getAttribute("aria-pressed"),selected:video.getAttribute("aria-selected")}:null,
+          ratio916:ratio?{x:r2.left+r2.width/2,y:r2.top+r2.height/2}:null
+        };
+      })()`);
+
+      if (!afterOpen?.video) {
+        throw new Error("Flow settings opened, but the Video option was not found. Refusing to generate on an image surface.");
+      }
+
+      await clickPoint({x:afterOpen.video.x,y:afterOpen.video.y});
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Re-open the composer settings if necessary so 9:16 is explicit.
+      const ratioState = await evaluate(flowTab.id, `(() => {
+        const visible = el => { const r=el.getBoundingClientRect(); const s=getComputedStyle(el); return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled; };
+        const nodes=Array.from(document.querySelectorAll('button,[role="button"]')).filter(visible);
+        const exact=nodes.find(el => /^9:16$/i.test((el.innerText||"").trim()));
+        if(exact){const r=exact.getBoundingClientRect();return {open:true,x:r.left+r.width/2,y:r.top+r.height/2};}
+        const settings=nodes.find(el => /generation settings|settings|tune|sliders/i.test([el.innerText||"",el.getAttribute("aria-label")||"",el.getAttribute("title")||"",...Array.from(el.querySelectorAll("i")).map(i=>i.textContent||"")].join(" ")));
+        if(settings){const r=settings.getBoundingClientRect();return {open:false,x:r.left+r.width/2,y:r.top+r.height/2};}
+        return {open:false};
+      })()`);
+
+      if (ratioState?.open) {
+        await clickPoint({x:ratioState.x,y:ratioState.y});
+      } else if (ratioState?.x) {
+        await clickPoint({x:ratioState.x,y:ratioState.y});
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const ratioOpen=await evaluate(flowTab.id,`(() => {
+          const nodes=Array.from(document.querySelectorAll('button,[role="button"],[role="menuitem"],[role="option"]')).filter(el=>{const r=el.getBoundingClientRect();const s=getComputedStyle(el);return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden"&&!el.disabled});
+          const el=nodes.find(n=>/^9:16$/i.test((n.innerText||"").trim()));
+          if(!el)return null;const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};
+        })()`);
+        if(ratioOpen) await clickPoint(ratioOpen);
+      }
+
+      return {videoLocked:true,ratio916Attempted:true};
+    };
+
+    const flowVideoState = await ensureFlowVideoMode();
+
     const input = await evaluate(
       flowTab.id,
       `(() => {
