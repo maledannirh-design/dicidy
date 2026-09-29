@@ -171,7 +171,7 @@ ${prompt}`;
     if (count > beforeCount) {
       const current = (await messages.last().innerText().catch(() => "")).trim();
 
-      if (current && !/^(Thinking|Generating|Searching)\\b/i.test(current)) {
+      if (current && !/^(Thinking|Generating|Searching)\b/i.test(current)) {
         if (current === lastText) {
           if (!stableSince) stableSince = Date.now();
           if (Date.now() - stableSince >= 1800) {
