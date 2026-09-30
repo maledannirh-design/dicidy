@@ -3,6 +3,7 @@ const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
 const handoffButton = document.getElementById("handoff");
 const lastChatButton = document.getElementById("lastChat");
+const pasteImageButton = document.getElementById("pasteImage");
 const output = document.getElementById("result");
 
 async function send(type) {
@@ -86,6 +87,31 @@ lastChatButton.addEventListener("click", async () => {
     directButton.disabled = false;
     handoffButton.disabled = false;
     lastChatButton.disabled = false;
+    runButton.disabled = false;
+  }
+});
+
+pasteImageButton.addEventListener("click", async () => {
+  testButton.disabled = true;
+  directButton.disabled = true;
+  handoffButton.disabled = true;
+  lastChatButton.disabled = true;
+  pasteImageButton.disabled = true;
+  runButton.disabled = true;
+  output.textContent =
+    "Pasting the IMAGE currently in the Windows clipboard into the verified Flow editor…";
+
+  try {
+    const result = await send("DICIDY_PASTE_CLIPBOARD_IMAGE_TO_FLOW");
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    output.textContent = "ERROR: " + error.message;
+  } finally {
+    testButton.disabled = false;
+    directButton.disabled = false;
+    handoffButton.disabled = false;
+    lastChatButton.disabled = false;
+    pasteImageButton.disabled = false;
     runButton.disabled = false;
   }
 });
