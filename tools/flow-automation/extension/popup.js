@@ -8,7 +8,6 @@ async function send(type) {
   return chrome.runtime.sendMessage({ type });
 }
 
-
 testButton.addEventListener("click", async () => {
   testButton.disabled = true;
   runButton.disabled = true;
