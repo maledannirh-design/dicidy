@@ -1,6 +1,7 @@
 const testButton = document.getElementById("test");
 const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
+const handoffButton = document.getElementById("handoff");
 const output = document.getElementById("result");
 
 async function send(type) {
@@ -39,6 +40,26 @@ directButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     directButton.disabled = false;
+    runButton.disabled = false;
+  }
+});
+
+
+handoffButton.addEventListener("click", async () => {
+  testButton.disabled = true;
+  directButton.disabled = true;
+  handoffButton.disabled = true;
+  runButton.disabled = true;
+  output.textContent = "Testing ChatGPT → Flow only… no image, generate, or download.";
+  try {
+    const result = await send("DICIDY_TEST_CHAT_TO_FLOW");
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    output.textContent = "ERROR: " + error.message;
+  } finally {
+    testButton.disabled = false;
+    directButton.disabled = false;
+    handoffButton.disabled = false;
     runButton.disabled = false;
   }
 });
