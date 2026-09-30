@@ -434,7 +434,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
     // Flow Agent/Slate may ignore CDP Input.insertText even when the
     // contenteditable is visibly focused. Use a real keyboard-style
     // keyDown with the text payload after explicitly placing the caret.
-    await evaluate(flowTab.id, \`(() => {
+    await evaluate(flowTab.id, `(() => {
       const candidates=Array.from(document.querySelectorAll(
         '[role="textbox"][contenteditable="true"],' +
         '[role="textbox"] [contenteditable="true"],' +
@@ -466,7 +466,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
       selection.addRange(range);
 
       return document.activeElement===el;
-    })()\`);
+    })()`);
 
     await new Promise(r=>setTimeout(r,100));
 
