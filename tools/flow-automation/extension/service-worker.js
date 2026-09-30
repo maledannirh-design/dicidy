@@ -264,226 +264,133 @@ async function prepareFlow(flowTab, compiledPrompt) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
-    // Flow's Agent composer only appears reliably after entering Scenes.
-    const sceneNav = await evaluate(flowTab.id, `(() => {
+    // Proven by TEST DIRECT TEXT -> FLOW: Flow accepts Input.insertText
+    // on its visible contenteditable composer.
+    const target = await evaluate(flowTab.id, `(() => {
       const visible = el => {
         const r = el.getBoundingClientRect();
         const s = getComputedStyle(el);
         return r.width > 0 && r.height > 0 &&
-          s.visibility !== "hidden" &&
-          s.display !== "none" &&
-          !el.disabled;
+          s.display !== "none" && s.visibility !== "hidden" && !el.disabled;
       };
-      const nodes = Array.from(document.querySelectorAll('button,[role="button"],a')).filter(visible);
-      const target = nodes.find(el =>
-        /^Scenes$/i.test([
-          el.innerText || "",
-          el.getAttribute("aria-label") || "",
-          el.getAttribute("title") || ""
-        ].join(" ").trim())
-      );
-      if (!target) return { found:false };
-      const r = target.getBoundingClientRect();
-      return { found:true, x:r.left+r.width/2, y:r.top+r.height/2 };
-    })()`);
-
-    if (sceneNav?.found) {
-      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:sceneNav.x,y:sceneNav.y});
-      await new Promise(r=>setTimeout(r,75));
-      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-        type:"mousePressed",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1
-      });
-      await new Promise(r=>setTimeout(r,50));
-      await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-        type:"mouseReleased",x:sceneNav.x,y:sceneNav.y,button:"left",clickCount:1
-      });
-      await new Promise(r=>setTimeout(r,900));
-    }
-
-    // Current Flow Agent UI: the real prompt is the contenteditable inside
-    // the role=textbox with placeholder "What do you want to create?".
-    const input = await evaluate(flowTab.id, `(() => {
-      const visible = el => {
-        const r=el.getBoundingClientRect(), s=getComputedStyle(el);
-        return r.width>0 && r.height>0 && s.display!=="none" &&
-          s.visibility!=="hidden" && !el.disabled;
-      };
-
-      const all = Array.from(document.querySelectorAll(
+      const candidates = Array.from(document.querySelectorAll(
         '[role="textbox"][contenteditable="true"],' +
         '[role="textbox"] [contenteditable="true"],' +
         '[data-slate-editor="true"][contenteditable="true"],' +
         '[contenteditable="true"]'
       )).filter(visible);
-
-      const exact = all.find(el => {
-        const text=(el.innerText||el.textContent||"").trim();
-        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
-        const host=el.closest('[role="textbox"]');
-        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
-        return /What do you want to create\\?/i.test(text+" "+p+" "+hp);
-      });
-
-      const textboxChild = all.find(el=>el.closest('[role="textbox"]'));
-      const slate = all.find(el=>el.matches('[data-slate-editor="true"]'));
-
-      const candidates=[exact,textboxChild,slate]
-        .filter(Boolean)
-        .filter((el,index,arr)=>arr.indexOf(el)===index)
-        .sort((a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom);
-
-      const el=candidates[0];
-      if(!el) return {
+      const score = el => {
+        const host = el.closest('[role="textbox"]');
+        const text = [
+          el.getAttribute("data-placeholder") || "",
+          el.getAttribute("placeholder") || "",
+          host?.getAttribute("data-placeholder") || "",
+          host?.getAttribute("placeholder") || "",
+          el.innerText || "", el.textContent || ""
+        ].join(" ");
+        let value = 0;
+        if (el.getAttribute("contenteditable") === "true") value += 50;
+        if (el.matches('[data-slate-editor="true"]')) value += 100;
+        if (/What do you want to create\?/i.test(text)) value += 1000;
+        value += Math.max(0, el.getBoundingClientRect().top);
+        return value;
+      };
+      const ranked = candidates.map(el => ({el,score:score(el)}))
+        .sort((a,b)=>b.score-a.score);
+      const el = ranked[0]?.el;
+      if (!el) return {
         ok:false,
-        reason:"Flow Agent composer not found",
+        reason:"Flow contenteditable composer not found",
         contenteditables:document.querySelectorAll('[contenteditable="true"]').length,
         textboxes:document.querySelectorAll('[role="textbox"]').length,
         slate:document.querySelectorAll('[data-slate-editor="true"]').length
       };
-
       const r=el.getBoundingClientRect();
       const host=el.closest('[role="textbox"]');
-      const hr=host ? host.getBoundingClientRect() : null;
+      const hr=host?.getBoundingClientRect();
       return {
         ok:true,
         tag:el.tagName,
         role:el.getAttribute("role")||"",
         contenteditable:el.getAttribute("contenteditable")||"",
         placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||
-          (host&&(host.getAttribute("data-placeholder")||host.getAttribute("placeholder")))||"",
-        text:(el.innerText||el.textContent||"").slice(0,300),
+          host?.getAttribute("data-placeholder")||host?.getAttribute("placeholder")||"",
+        text:(el.innerText||el.textContent||"").trim().slice(0,160),
         x:(hr||r).left+Math.min((hr||r).width/2,300),
         y:(hr||r).top+Math.min((hr||r).height/2,30)
       };
     })()`);
 
-    if(!input?.ok) return {ready:false,reason:JSON.stringify(input||{})};
+    if (!target?.ok) return {ready:false,reason:JSON.stringify(target||{})};
 
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{type:"mouseMoved",x:input.x,y:input.y});
-    await new Promise(r=>setTimeout(r,100));
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-      type:"mousePressed",x:input.x,y:input.y,button:"left",clickCount:1
+      type:"mouseMoved",x:target.x,y:target.y
     });
-    await new Promise(r=>setTimeout(r,60));
     await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-      type:"mouseReleased",x:input.x,y:input.y,button:"left",clickCount:1
+      type:"mousePressed",x:target.x,y:target.y,button:"left",clickCount:1
     });
-    await new Promise(r=>setTimeout(r,250));
+    await new Promise(r=>setTimeout(r,50));
+    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
+      type:"mouseReleased",x:target.x,y:target.y,button:"left",clickCount:1
+    });
+    await new Promise(r=>setTimeout(r,200));
 
-    // Re-focus the exact Agent composer so Slate owns the active selection.
-    await evaluate(flowTab.id, `(() => {
+    const focused=await evaluate(flowTab.id,`(() => {
       const candidates=Array.from(document.querySelectorAll(
         '[role="textbox"][contenteditable="true"],' +
         '[role="textbox"] [contenteditable="true"],' +
-        '[data-slate-editor="true"][contenteditable="true"]'
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
       )).filter(el=>{
         const r=el.getBoundingClientRect(),s=getComputedStyle(el);
         return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
       });
-
-      const exact=candidates.find(el=>{
-        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
-        const host=el.closest('[role="textbox"]');
-        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
-        return /What do you want to create\\?/i.test(p+" "+hp);
-      });
-
-      const el=exact||candidates.sort(
-        (a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom
-      )[0];
-
-      if(!el) return false;
+      const el=candidates.find(e=>{
+        const host=e.closest('[role="textbox"]');
+        return /What do you want to create\?/i.test([
+          e.getAttribute("data-placeholder")||"",
+          e.getAttribute("placeholder")||"",
+          host?.getAttribute("data-placeholder")||"",
+          host?.getAttribute("placeholder")||""
+        ].join(" "));
+      })||candidates.sort((a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom)[0];
+      if(!el)return {ok:false};
       el.focus();
-      return true;
-    })()`);
-
-    const active=await evaluate(flowTab.id,`(() => {
-      const el=document.activeElement;
-      return el ? {
-        tag:el.tagName,
-        role:el.getAttribute("role")||"",
-        contenteditable:el.getAttribute("contenteditable")||"",
-        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
-        text:(el.innerText||el.textContent||"").slice(0,120)
-      } : null;
-    })()`);
-
-    // Clear only if the active element is the contenteditable composer.
-    if(active && active.contenteditable==="true"){
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyDown",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17
-      });
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyDown",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65
-      });
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyUp",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65
-      });
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyUp",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17
-      });
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyDown",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8
-      });
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-        type:"keyUp",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8
-      });
-      await new Promise(r=>setTimeout(r,150));
-    }
-
-    // Flow Agent/Slate may ignore CDP Input.insertText even when the
-    // contenteditable is visibly focused. Use a real keyboard-style
-    // keyDown with the text payload after explicitly placing the caret.
-    await evaluate(flowTab.id, `(() => {
-      const candidates=Array.from(document.querySelectorAll(
-        '[role="textbox"][contenteditable="true"],' +
-        '[role="textbox"] [contenteditable="true"],' +
-        '[data-slate-editor="true"][contenteditable="true"]'
-      )).filter(el=>{
-        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
-      });
-
-      const exact=candidates.find(el=>{
-        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
-        const host=el.closest('[role="textbox"]');
-        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
-        return /What do you want to create\\?/i.test(p+" "+hp);
-      });
-
-      const el=exact||candidates.sort(
-        (a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom
-      )[0];
-
-      if(!el) return false;
-      el.focus();
-
       const range=document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);
       const selection=window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
-
-      return document.activeElement===el;
+      const active=document.activeElement;
+      return {
+        ok:true,
+        activeTag:active?.tagName||null,
+        activeContenteditable:active?.getAttribute("contenteditable")||"",
+        selectionRangeCount:selection?.rangeCount||0
+      };
     })()`);
 
-    await new Promise(r=>setTimeout(r,100));
+    if(!focused?.ok||focused.activeContenteditable!=="true") {
+      return {ready:false,reason:"Flow composer could not be focused.",target,focused};
+    }
 
-    await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-      type:"keyDown",
-      key:"Unidentified",
-      code:"Unidentified",
-      text:compiledPrompt,
-      unmodifiedText:compiledPrompt
-    });
-    await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
-      type:"keyUp",
-      key:"Unidentified",
-      code:"Unidentified"
-    });
+    // Clear existing composer content.
+    for (const event of [
+      {type:"keyDown",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17},
+      {type:"keyDown",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
+      {type:"keyUp",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
+      {type:"keyUp",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17},
+      {type:"keyDown",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8},
+      {type:"keyUp",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8}
+    ]) {
+      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",event);
+    }
+    await new Promise(r=>setTimeout(r,150));
 
-    await new Promise(r=>setTimeout(r,1200));
+    // This exact method is proven to work in the direct diagnostic.
+    await sendCommand(flowTab.id,"Input.insertText",{text:compiledPrompt});
+    await new Promise(r=>setTimeout(r,800));
 
     const verification=await evaluate(flowTab.id,`(() => {
       const visible=el=>{
@@ -496,27 +403,23 @@ async function prepareFlow(flowTab, compiledPrompt) {
         '[data-slate-editor="true"][contenteditable="true"],' +
         '[contenteditable="true"]'
       )).filter(visible);
-      const values=nodes.map(el=>({
-        tag:el.tagName,
-        role:el.getAttribute("role")||"",
-        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"",
-        text:(el.innerText||el.textContent||"").trim()
-      }));
       const needle=${JSON.stringify(compiledPrompt.slice(0,80))};
-      return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-12)};
+      const values=nodes.map(el=>({
+        text:(el.innerText||el.textContent||"").trim(),
+        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||""
+      }));
+      return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-8)};
     })()`);
 
-    if(!verification?.found){
+    if(!verification?.found) {
       return {
         ready:false,
-        reason:"Flow Agent composer was found/focused, but the ChatGPT prompt was not verified after paste.",
-        input,
-        active,
-        verification
+        reason:"Flow composer was focused but compiled prompt was not verified after Input.insertText.",
+        target,focused,verification
       };
     }
 
-    return {ready:true,input,active,verification,videoModeDeferred:true};
+    return {ready:true,target,focused,verification,videoModeDeferred:true};
   } finally {
     await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
   }
