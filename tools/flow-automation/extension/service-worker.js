@@ -503,6 +503,163 @@ async function prepareFlow(flowTab, compiledPrompt) {
   }
 }
 
+async function pasteClipboardImageToFlow() {
+  const targets = await findTargets();
+  if (!targets.flow) throw new Error("Google Flow tab was not found.");
+
+  const flowTab = targets.flow;
+  await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
+
+  try {
+    const target = await evaluate(flowTab.id, `(() => {
+      const el = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+      if (!el) {
+        return {
+          ok:false,
+          reason:"Verified Flow ProseMirror prompt editor was not found."
+        };
+      }
+
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      if (
+        r.width <= 0 ||
+        r.height <= 0 ||
+        s.display === "none" ||
+        s.visibility === "hidden"
+      ) {
+        return {
+          ok:false,
+          reason:"Flow ProseMirror prompt editor exists but is not visible."
+        };
+      }
+
+      return {
+        ok:true,
+        x:r.left + r.width / 2,
+        y:r.top + r.height / 2,
+        beforeText:(el.innerText || el.textContent || "").trim(),
+        beforeImages:el.querySelectorAll("img").length
+      };
+    })()`);
+
+    if (!target?.ok) return { ready:false, target };
+
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type:"mouseMoved",
+      x:target.x,
+      y:target.y
+    });
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type:"mousePressed",
+      x:target.x,
+      y:target.y,
+      button:"left",
+      clickCount:1
+    });
+    await new Promise(r => setTimeout(r, 50));
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type:"mouseReleased",
+      x:target.x,
+      y:target.y,
+      button:"left",
+      clickCount:1
+    });
+    await new Promise(r => setTimeout(r, 150));
+
+    const focused = await evaluate(flowTab.id, `(() => {
+      const el = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+      if (!el) return {ok:false};
+
+      el.focus();
+      return {
+        ok:true,
+        activeIsExactEditor:document.activeElement === el
+      };
+    })()`);
+
+    if (!focused?.ok || !focused.activeIsExactEditor) {
+      return {
+        ready:false,
+        reason:"Could not focus the verified Flow ProseMirror editor.",
+        target,
+        focused
+      };
+    }
+
+    // Paste the IMAGE currently held by the operating-system clipboard.
+    // This deliberately does not use DOM clipboard APIs or Flow upload controls.
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type:"keyDown",
+      key:"Control",
+      code:"ControlLeft",
+      modifiers:2,
+      windowsVirtualKeyCode:17,
+      nativeVirtualKeyCode:17
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type:"keyDown",
+      key:"v",
+      code:"KeyV",
+      modifiers:2,
+      windowsVirtualKeyCode:86,
+      nativeVirtualKeyCode:86
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type:"keyUp",
+      key:"v",
+      code:"KeyV",
+      modifiers:2,
+      windowsVirtualKeyCode:86,
+      nativeVirtualKeyCode:86
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type:"keyUp",
+      key:"Control",
+      code:"ControlLeft",
+      windowsVirtualKeyCode:17,
+      nativeVirtualKeyCode:17
+    });
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    const verification = await evaluate(flowTab.id, `(() => {
+      const editor = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+      if (!editor) return {found:false,reason:"Editor disappeared after paste."};
+
+      const imgs = Array.from(editor.querySelectorAll("img")).map(img => ({
+        srcPrefix:String(img.currentSrc || img.src || "").slice(0,120),
+        alt:img.alt || "",
+        width:img.getBoundingClientRect().width,
+        height:img.getBoundingClientRect().height
+      }));
+
+      return {
+        found:true,
+        imageCount:imgs.length,
+        images:imgs,
+        text:(editor.innerText || editor.textContent || "").trim().slice(0,300),
+        html:editor.innerHTML.slice(0,1000)
+      };
+    })()`);
+
+    return {
+      ready:true,
+      pasteDispatched:true,
+      verification
+    };
+  } finally {
+    await chrome.debugger.detach({ tabId:flowTab.id }).catch(() => {});
+  }
+}
+
+
 async function prepareFlowImage(flowTab, product) {
   const imageData = String(product?.imageData || "");
   const imageUrl = String(product?.image || "");
@@ -1438,6 +1595,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     })
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ ok:false, error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_PASTE_CLIPBOARD_IMAGE_TO_FLOW") {
+    pasteClipboardImageToFlow()
+      .then(result => sendResponse({ ok:true, ...result }))
+      .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
     return true;
   }
 
