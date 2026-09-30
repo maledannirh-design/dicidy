@@ -6,6 +6,7 @@ async function sendCommand(tabId, method, params = {}) {
   return chrome.debugger.sendCommand({ tabId }, method, params);
 }
 
+
 async function evaluate(tabId, expression) {
   const result = await sendCommand(tabId, "Runtime.evaluate", {
     expression,
