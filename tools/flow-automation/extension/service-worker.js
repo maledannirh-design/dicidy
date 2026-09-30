@@ -1233,6 +1233,58 @@ async function moveLastChatToFlow() {
     throw new Error("No usable last assistant message was found in ChatGPT.");
   }
 
+  // Phase 3 must enter the VIDEO scene surface first.
+  // Do not use All media: that surface can accept image-generation prompts.
+  await chrome.debugger.attach({ tabId: targets.flow.id }, "1.3");
+  let sceneNavigation = null;
+  try {
+    sceneNavigation = await evaluate(targets.flow.id, \`(() => {
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.display !== "none" && s.visibility !== "hidden";
+      };
+      const nodes = Array.from(document.querySelectorAll(
+        'button,[role="button"],a,[role="link"]'
+      )).filter(visible);
+      const scene = nodes.find(el => /^Scenes$/i.test(
+        (el.innerText || el.textContent || "").trim()
+      ));
+      if (!scene) {
+        return {
+          ok:false,
+          reason:"Scenes navigation control was not found.",
+          candidates:nodes.map(el => (el.innerText || el.textContent || "").trim())
+            .filter(Boolean).slice(0,80)
+        };
+      }
+      const r=scene.getBoundingClientRect();
+      return {ok:true,x:r.left+r.width/2,y:r.top+r.height/2};
+    })()\`);
+    
+    if (!sceneNavigation?.ok) {
+      throw new Error(sceneNavigation?.reason || "Scenes navigation failed.");
+    }
+
+    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {
+      type:"mouseMoved", x:sceneNavigation.x, y:sceneNavigation.y
+    });
+    await new Promise(r=>setTimeout(r,75));
+    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {
+      type:"mousePressed", x:sceneNavigation.x, y:sceneNavigation.y,
+      button:"left", clickCount:1
+    });
+    await new Promise(r=>setTimeout(r,50));
+    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {
+      type:"mouseReleased", x:sceneNavigation.x, y:sceneNavigation.y,
+      button:"left", clickCount:1
+    });
+    await new Promise(r=>setTimeout(r,700));
+  } finally {
+    await chrome.debugger.detach({ tabId: targets.flow.id }).catch(() => {});
+  }
+
   const flowResult = await prepareFlow(targets.flow, lastAssistantText);
 
   return {
