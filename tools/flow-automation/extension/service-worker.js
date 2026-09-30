@@ -264,166 +264,245 @@ async function prepareFlow(flowTab, compiledPrompt) {
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
 
   try {
-    // Proven by TEST DIRECT TEXT -> FLOW: Flow accepts Input.insertText
-    // on its visible contenteditable composer.
+    /*
+     * FLOW DOM VERIFIED FROM THE USER'S LIVE DOM DUMP.
+     *
+     * The real prompt editor is:
+     * flow-rich-text-editor.prompt-input
+     *   > .prosemirror-editor
+     *     > .ProseMirror[contenteditable="true"]
+     *
+     * Do NOT guess by generic contenteditable, textarea, placeholder,
+     * icon position, or Shadow DOM. The user has already confirmed that
+     * direct CDP Input.insertText works on this exact editor.
+     *
+     * IMPORTANT:
+     * The user manually opens "Scenes" first. This function intentionally
+     * does NOT search for or click the Scenes navigation control.
+     */
+
     const target = await evaluate(flowTab.id, `(() => {
-      const visible = el => {
-        const r = el.getBoundingClientRect();
-        const s = getComputedStyle(el);
-        return r.width > 0 && r.height > 0 &&
-          s.display !== "none" && s.visibility !== "hidden" && !el.disabled;
-      };
-      const candidates = Array.from(document.querySelectorAll(
-        '[role="textbox"][contenteditable="true"],' +
-        '[role="textbox"] [contenteditable="true"],' +
-        '[data-slate-editor="true"][contenteditable="true"],' +
-        '[contenteditable="true"]'
-      )).filter(visible);
-      const score = el => {
-        const host = el.closest('[role="textbox"]');
-        const text = [
-          el.getAttribute("data-placeholder") || "",
-          el.getAttribute("placeholder") || "",
-          host?.getAttribute("data-placeholder") || "",
-          host?.getAttribute("placeholder") || "",
-          el.innerText || "", el.textContent || ""
-        ].join(" ");
-        let value = 0;
-        if (el.getAttribute("contenteditable") === "true") value += 50;
-        if (el.matches('[data-slate-editor="true"]')) value += 100;
-        if (/What do you want to create\?/i.test(text)) value += 1000;
-        value += Math.max(0, el.getBoundingClientRect().top);
-        return value;
-      };
-      const ranked = candidates.map(el => ({el,score:score(el)}))
-        .sort((a,b)=>b.score-a.score);
-      const el = ranked[0]?.el;
-      if (!el) return {
-        ok:false,
-        reason:"Flow contenteditable composer not found",
-        contenteditables:document.querySelectorAll('[contenteditable="true"]').length,
-        textboxes:document.querySelectorAll('[role="textbox"]').length,
-        slate:document.querySelectorAll('[data-slate-editor="true"]').length
-      };
-      const r=el.getBoundingClientRect();
-      const host=el.closest('[role="textbox"]');
-      const hr=host?.getBoundingClientRect();
+      const el = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+
+      if (!el) {
+        return {
+          ok: false,
+          reason: "Verified Flow ProseMirror prompt editor was not found.",
+          exactSelector:
+            'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+        };
+      }
+
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+
+      if (
+        r.width <= 0 ||
+        r.height <= 0 ||
+        s.display === "none" ||
+        s.visibility === "hidden"
+      ) {
+        return {
+          ok: false,
+          reason: "Verified Flow ProseMirror prompt editor exists but is not visible.",
+          rect: {
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height
+          }
+        };
+      }
+
       return {
-        ok:true,
-        tag:el.tagName,
-        role:el.getAttribute("role")||"",
-        contenteditable:el.getAttribute("contenteditable")||"",
-        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||
-          host?.getAttribute("data-placeholder")||host?.getAttribute("placeholder")||"",
-        text:(el.innerText||el.textContent||"").trim().slice(0,160),
-        x:(hr||r).left+Math.min((hr||r).width/2,300),
-        y:(hr||r).top+Math.min((hr||r).height/2,30)
+        ok: true,
+        tag: el.tagName,
+        className: el.className,
+        contenteditable: el.getAttribute("contenteditable") || "",
+        currentText: (el.innerText || el.textContent || "").trim(),
+        rect: {
+          left: r.left,
+          top: r.top,
+          width: r.width,
+          height: r.height
+        },
+        x: r.left + Math.min(Math.max(r.width / 2, 20), Math.max(r.width - 20, 20)),
+        y: r.top + Math.min(Math.max(r.height / 2, 10), Math.max(r.height - 10, 10))
       };
     })()`);
 
-    if (!target?.ok) return {ready:false,reason:JSON.stringify(target||{})};
+    if (!target?.ok) {
+      return {
+        ready: false,
+        reason: target?.reason || "Verified Flow prompt editor not found.",
+        target
+      };
+    }
 
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-      type:"mouseMoved",x:target.x,y:target.y
+    // Trusted mouse click into the exact ProseMirror editor.
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: target.x,
+      y: target.y
     });
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-      type:"mousePressed",x:target.x,y:target.y,button:"left",clickCount:1
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      x: target.x,
+      y: target.y,
+      button: "left",
+      clickCount: 1
     });
-    await new Promise(r=>setTimeout(r,50));
-    await sendCommand(flowTab.id,"Input.dispatchMouseEvent",{
-      type:"mouseReleased",x:target.x,y:target.y,button:"left",clickCount:1
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await sendCommand(flowTab.id, "Input.dispatchMouseEvent", {
+      type: "mouseReleased",
+      x: target.x,
+      y: target.y,
+      button: "left",
+      clickCount: 1
     });
-    await new Promise(r=>setTimeout(r,200));
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-    const focused=await evaluate(flowTab.id,`(() => {
-      const candidates=Array.from(document.querySelectorAll(
-        '[role="textbox"][contenteditable="true"],' +
-        '[role="textbox"] [contenteditable="true"],' +
-        '[data-slate-editor="true"][contenteditable="true"],' +
-        '[contenteditable="true"]'
-      )).filter(el=>{
-        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
-      });
-      const el=candidates.find(e=>{
-        const host=e.closest('[role="textbox"]');
-        return /What do you want to create\?/i.test([
-          e.getAttribute("data-placeholder")||"",
-          e.getAttribute("placeholder")||"",
-          host?.getAttribute("data-placeholder")||"",
-          host?.getAttribute("placeholder")||""
-        ].join(" "));
-      })||candidates.sort((a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom)[0];
-      if(!el)return {ok:false};
+    // Focus the exact editor and place the caret at the end.
+    const focused = await evaluate(flowTab.id, `(() => {
+      const el = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+
+      if (!el) return { ok: false, reason: "Exact ProseMirror editor disappeared after click." };
+
       el.focus();
-      const range=document.createRange();
+
+      const selection = window.getSelection();
+      const range = document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);
-      const selection=window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
-      const active=document.activeElement;
+
+      const active = document.activeElement;
+
       return {
-        ok:true,
-        activeTag:active?.tagName||null,
-        activeContenteditable:active?.getAttribute("contenteditable")||"",
-        selectionRangeCount:selection?.rangeCount||0
+        ok: true,
+        activeIsExactEditor:
+          active === el &&
+          active.getAttribute("contenteditable") === "true",
+        activeTag: active?.tagName || "",
+        activeClass: active?.className || "",
+        selectionRangeCount: selection?.rangeCount || 0
       };
     })()`);
 
-    if(!focused?.ok||focused.activeContenteditable!=="true") {
-      return {ready:false,reason:"Flow composer could not be focused.",target,focused};
-    }
-
-    // Clear existing composer content.
-    for (const event of [
-      {type:"keyDown",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17},
-      {type:"keyDown",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
-      {type:"keyUp",key:"a",code:"KeyA",windowsVirtualKeyCode:65,nativeVirtualKeyCode:65},
-      {type:"keyUp",key:"Control",code:"ControlLeft",windowsVirtualKeyCode:17,nativeVirtualKeyCode:17},
-      {type:"keyDown",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8},
-      {type:"keyUp",key:"Backspace",code:"Backspace",windowsVirtualKeyCode:8,nativeVirtualKeyCode:8}
-    ]) {
-      await sendCommand(flowTab.id,"Input.dispatchKeyEvent",event);
-    }
-    await new Promise(r=>setTimeout(r,150));
-
-    // This exact method is proven to work in the direct diagnostic.
-    await sendCommand(flowTab.id,"Input.insertText",{text:compiledPrompt});
-    await new Promise(r=>setTimeout(r,800));
-
-    const verification=await evaluate(flowTab.id,`(() => {
-      const visible=el=>{
-        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
+    if (!focused?.ok || !focused.activeIsExactEditor) {
+      return {
+        ready: false,
+        reason: "Exact Flow ProseMirror editor could not be focused.",
+        target,
+        focused
       };
-      const nodes=Array.from(document.querySelectorAll(
-        '[role="textbox"][contenteditable="true"],' +
-        '[role="textbox"] [contenteditable="true"],' +
-        '[data-slate-editor="true"][contenteditable="true"],' +
-        '[contenteditable="true"]'
-      )).filter(visible);
-      const needle=${JSON.stringify(compiledPrompt.slice(0,80))};
-      const values=nodes.map(el=>({
-        text:(el.innerText||el.textContent||"").trim(),
-        placeholder:el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||""
-      }));
-      return {found:values.some(v=>v.text.includes(needle)),values:values.slice(-8)};
+    }
+
+    // Clear only the exact editor. No DOM text mutation is used.
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Control",
+      code: "ControlLeft",
+      windowsVirtualKeyCode: 17,
+      nativeVirtualKeyCode: 17
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "a",
+      code: "KeyA",
+      windowsVirtualKeyCode: 65,
+      nativeVirtualKeyCode: 65
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "a",
+      code: "KeyA",
+      windowsVirtualKeyCode: 65,
+      nativeVirtualKeyCode: 65
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Control",
+      code: "ControlLeft",
+      windowsVirtualKeyCode: 17,
+      nativeVirtualKeyCode: 17
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+      nativeVirtualKeyCode: 8
+    });
+    await sendCommand(flowTab.id, "Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+      nativeVirtualKeyCode: 8
+    });
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Proven direct-input method.
+    await sendCommand(flowTab.id, "Input.insertText", {
+      text: compiledPrompt
+    });
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    // Verify the exact ProseMirror editor, not a generic contenteditable.
+    const verification = await evaluate(flowTab.id, `(() => {
+      const el = document.querySelector(
+        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
+      );
+
+      if (!el) {
+        return {
+          found: false,
+          reason: "Exact ProseMirror editor disappeared during verification."
+        };
+      }
+
+      const text = (el.innerText || el.textContent || "").trim();
+      const needle = ${JSON.stringify(String(compiledPrompt).slice(0, 80))};
+
+      return {
+        found: Boolean(needle && text.includes(needle)),
+        textLength: text.length,
+        preview: text.slice(0, 300),
+        expectedPreview: needle,
+        activeIsExactEditor: document.activeElement === el
+      };
     })()`);
 
-    if(!verification?.found) {
+    if (!verification?.found) {
       return {
-        ready:false,
-        reason:"Flow composer was focused but compiled prompt was not verified after Input.insertText.",
-        target,focused,verification
+        ready: false,
+        reason:
+          "Input.insertText completed, but the exact Flow ProseMirror editor did not contain the compiled prompt.",
+        target,
+        focused,
+        verification
       };
     }
 
-    return {ready:true,target,focused,verification,videoModeDeferred:true};
+    return {
+      ready: true,
+      target,
+      focused,
+      verification,
+      videoModeDeferred: true,
+      scenesNavigation: "MANUAL_USER_SELECTION"
+    };
   } finally {
-    await chrome.debugger.detach({tabId:flowTab.id}).catch(()=>{});
+    await chrome.debugger.detach({ tabId: flowTab.id }).catch(() => {});
   }
 }
+
 async function prepareFlowImage(flowTab, product) {
   const imageData = String(product?.imageData || "");
   const imageUrl = String(product?.image || "");
