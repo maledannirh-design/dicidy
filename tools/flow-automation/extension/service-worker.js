@@ -431,8 +431,59 @@ async function prepareFlow(flowTab, compiledPrompt) {
       await new Promise(r=>setTimeout(r,150));
     }
 
-    await sendCommand(flowTab.id,"Input.insertText",{text:compiledPrompt});
-    await new Promise(r=>setTimeout(r,900));
+    // Flow Agent/Slate may ignore CDP Input.insertText even when the
+    // contenteditable is visibly focused. Use a real keyboard-style
+    // keyDown with the text payload after explicitly placing the caret.
+    await evaluate(flowTab.id, \`(() => {
+      const candidates=Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"]'
+      )).filter(el=>{
+        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+        return r.width>0&&r.height>0&&s.display!=="none"&&s.visibility!=="hidden";
+      });
+
+      const exact=candidates.find(el=>{
+        const p=el.getAttribute("data-placeholder")||el.getAttribute("placeholder")||"";
+        const host=el.closest('[role="textbox"]');
+        const hp=host ? (host.getAttribute("data-placeholder")||host.getAttribute("placeholder")||"") : "";
+        return /What do you want to create\\?/i.test(p+" "+hp);
+      });
+
+      const el=exact||candidates.sort(
+        (a,b)=>b.getBoundingClientRect().bottom-a.getBoundingClientRect().bottom
+      )[0];
+
+      if(!el) return false;
+      el.focus();
+
+      const range=document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const selection=window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return document.activeElement===el;
+    })()\`);
+
+    await new Promise(r=>setTimeout(r,100));
+
+    await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+      type:"keyDown",
+      key:"Unidentified",
+      code:"Unidentified",
+      text:compiledPrompt,
+      unmodifiedText:compiledPrompt
+    });
+    await sendCommand(flowTab.id,"Input.dispatchKeyEvent",{
+      type:"keyUp",
+      key:"Unidentified",
+      code:"Unidentified"
+    });
+
+    await new Promise(r=>setTimeout(r,1200));
 
     const verification=await evaluate(flowTab.id,`(() => {
       const visible=el=>{
