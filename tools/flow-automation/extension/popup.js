@@ -2,6 +2,7 @@ const testButton = document.getElementById("test");
 const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
 const handoffButton = document.getElementById("handoff");
+const lastChatButton = document.getElementById("lastChat");
 const output = document.getElementById("result");
 
 async function send(type) {
@@ -30,6 +31,7 @@ directButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
   runButton.disabled = true;
+  lastChatButton.disabled = true;
   output.textContent = "Testing direct CDP text input into Flow…";
   try {
     const result = await send("DICIDY_TEST_FLOW_DIRECT");
@@ -40,6 +42,7 @@ directButton.addEventListener("click", async () => {
     testButton.disabled = false;
     directButton.disabled = false;
     runButton.disabled = false;
+    lastChatButton.disabled = false;
   }
 });
 
@@ -60,6 +63,30 @@ handoffButton.addEventListener("click", async () => {
     directButton.disabled = false;
     handoffButton.disabled = false;
     runButton.disabled = false;
+    lastChatButton.disabled = false;
+  }
+});
+
+lastChatButton.addEventListener("click", async () => {
+  testButton.disabled = true;
+  directButton.disabled = true;
+  handoffButton.disabled = true;
+  lastChatButton.disabled = true;
+  runButton.disabled = true;
+  output.textContent =
+    "Moving the LAST existing ChatGPT assistant message → Flow. No new prompt is sent to ChatGPT.";
+
+  try {
+    const result = await send("DICIDY_MOVE_LAST_CHAT_TO_FLOW");
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    output.textContent = "ERROR: " + error.message;
+  } finally {
+    testButton.disabled = false;
+    directButton.disabled = false;
+    handoffButton.disabled = false;
+    lastChatButton.disabled = false;
+    runButton.disabled = false;
   }
 });
 
@@ -77,5 +104,6 @@ runButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     runButton.disabled = false;
+    lastChatButton.disabled = false;
   }
 });
