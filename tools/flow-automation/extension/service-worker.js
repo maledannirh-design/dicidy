@@ -1200,6 +1200,57 @@ ${item.prompt}`;
   };
 }
 
+async function moveLastChatToFlow() {
+  const targets = await findTargets();
+  if (!targets.chat) throw new Error("Dedicated ChatGPT room was not found.");
+  if (!targets.flow) throw new Error("Google Flow tab was not found.");
+
+  // PHASE 3 TEST ONLY:
+  // Do NOT send anything new to ChatGPT. Read the LAST assistant message
+  // already visible in the dedicated room and move that exact text to Flow.
+  await chrome.debugger.attach({ tabId: targets.chat.id }, "1.3");
+  let lastAssistantText = "";
+  let chatSnapshot = null;
+
+  try {
+    chatSnapshot = await evaluate(targets.chat.id, `(() => {
+      const messages = Array.from(
+        document.querySelectorAll('[data-message-author-role="assistant"]')
+      );
+      const last = messages[messages.length - 1];
+      return {
+        count: messages.length,
+        text: last ? (last.innerText || last.textContent || "").trim() : "",
+        tag: last ? last.tagName : null
+      };
+    })()`);
+
+    lastAssistantText = String(chatSnapshot?.text || "").trim();
+  } finally {
+    await chrome.debugger.detach({ tabId: targets.chat.id }).catch(() => {});
+  }
+
+  if (!lastAssistantText) {
+    throw new Error("No usable last assistant message was found in ChatGPT.");
+  }
+
+  const flowResult = await prepareFlow(targets.flow, lastAssistantText);
+
+  return {
+    ok: Boolean(flowResult?.ready),
+    status: flowResult?.ready
+      ? "LAST_CHATGPT_TO_FLOW_READY"
+      : "LAST_CHATGPT_TO_FLOW_FAILED",
+    source: {
+      chatTabId: targets.chat.id,
+      assistantMessageCount: chatSnapshot?.count || 0,
+      textLength: lastAssistantText.length,
+      preview: lastAssistantText.slice(0, 300)
+    },
+    flow: flowResult
+  };
+}
+
 async function runOneJob() {
   const jobResponse = await bridgeRequest("/api/job");
   const job = jobResponse.job;
@@ -1325,6 +1376,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "DICIDY_TEST_CHAT_TO_FLOW") {
     testChatToFlowHandoff()
+      .then(result => sendResponse({ ok: true, ...result }))
+      .catch(error => sendResponse({ ok: false, status: "ERROR", error: error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_MOVE_LAST_CHAT_TO_FLOW") {
+    moveLastChatToFlow()
       .then(result => sendResponse({ ok: true, ...result }))
       .catch(error => sendResponse({ ok: false, status: "ERROR", error: error.message }));
     return true;
