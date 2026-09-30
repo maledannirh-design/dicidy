@@ -1238,7 +1238,7 @@ async function moveLastChatToFlow() {
   await chrome.debugger.attach({ tabId: targets.flow.id }, "1.3");
   let sceneNavigation = null;
   try {
-    sceneNavigation = await evaluate(targets.flow.id, \`(() => {
+    sceneNavigation = await evaluate(targets.flow.id, `(() => {
       const visible = el => {
         const r = el.getBoundingClientRect();
         const s = getComputedStyle(el);
@@ -1261,7 +1261,7 @@ async function moveLastChatToFlow() {
       }
       const r=scene.getBoundingClientRect();
       return {ok:true,x:r.left+r.width/2,y:r.top+r.height/2};
-    })()\`);
+    })()`);
     
     if (!sceneNavigation?.ok) {
       throw new Error(sceneNavigation?.reason || "Scenes navigation failed.");
