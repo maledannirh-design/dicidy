@@ -1160,6 +1160,45 @@ async function waitForNewDownload(startTimeMs, timeoutMs = 120000) {
   throw new Error("Timed out waiting for the downloaded video file.");
 }
 
+async function testChatToFlowHandoff() {
+  const jobResponse = await bridgeRequest("/api/job");
+  const job = jobResponse.job;
+  if (!job) throw new Error("No local job.json available.");
+
+  const item = Array.isArray(job.jobs) ? job.jobs[0] : null;
+  if (!item || !item.prompt) throw new Error("job.json has no usable first prompt.");
+
+  const targets = await findTargets();
+  if (!targets.chat) throw new Error("Dedicated ChatGPT room was not found.");
+  if (!targets.flow) throw new Error("Google Flow tab was not found.");
+
+  const compilerInstruction =
+`You are the prompt compiler for the DICIDY video-generation workflow.
+Return ONLY one production-ready Google Flow video prompt.
+Do not explain your reasoning.
+Preserve product facts exactly as supplied.
+Make the video vertical 9:16 and suitable for a TikTok affiliate video.
+Do not invent product claims, prices, discounts, specifications, or certifications.
+
+JOB INPUT:
+${item.prompt}`;
+
+  const started = Date.now();
+  const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
+  const chatDoneMs = Date.now() - started;
+
+  const flowResult = await prepareFlow(targets.flow, compiledPrompt);
+
+  return {
+    ok: Boolean(flowResult?.ready),
+    status: flowResult?.ready ? "CHATGPT_TO_FLOW_HANDOFF_READY" : "CHATGPT_TO_FLOW_HANDOFF_FAILED",
+    chatDoneMs,
+    promptLength: compiledPrompt.length,
+    promptPreview: compiledPrompt.slice(0, 500),
+    flow: flowResult
+  };
+}
+
 async function runOneJob() {
   const jobResponse = await bridgeRequest("/api/job");
   const job = jobResponse.job;
@@ -1280,6 +1319,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     testFlowDirectInput()
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ok:false,error:error.message}));
+    return true;
+  }
+
+  if (message.type === "DICIDY_TEST_CHAT_TO_FLOW") {
+    testChatToFlowHandoff()
+      .then(result => sendResponse({ ok: true, ...result }))
+      .catch(error => sendResponse({ ok: false, status: "ERROR", error: error.message }));
     return true;
   }
 
