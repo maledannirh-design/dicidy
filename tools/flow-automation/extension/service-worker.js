@@ -1204,80 +1204,35 @@ async function moveLastChatToFlow() {
   if (!targets.chat) throw new Error("Dedicated ChatGPT room was not found.");
   if (!targets.flow) throw new Error("Google Flow tab was not found.");
 
-  // Phase 3: read the exact last assistant message. Never create a new prompt.
+  // PHASE 3 ONLY.
+  // IMPORTANT: user manually opens Scenes first.
+  // Do not search for/click Scenes here. The proven direct Flow input
+  // path works once the user has already opened the correct video scene.
   await chrome.debugger.attach({ tabId: targets.chat.id }, "1.3");
   let lastAssistantText = "";
   let chatSnapshot = null;
   try {
     chatSnapshot = await evaluate(targets.chat.id, `(() => {
-      const messages = Array.from(
-        document.querySelectorAll('[data-message-author-role="assistant"]')
-      );
-      const last = messages[messages.length - 1];
-      return {
-        count: messages.length,
-        text: last ? (last.innerText || last.textContent || "").trim() : ""
-      };
-    })()`);
+  const messages = Array.from(
+    document.querySelectorAll('[data-message-author-role="assistant"]')
+  );
+  const last = messages[messages.length - 1];
+  return {
+    count: messages.length,
+    text: last ? (last.innerText || last.textContent || "").trim() : ""
+  };
+})()`);
     lastAssistantText = String(chatSnapshot?.text || "").trim();
   } finally {
     await chrome.debugger.detach({ tabId: targets.chat.id }).catch(() => {});
   }
+
   if (!lastAssistantText) throw new Error("No usable last assistant message was found in ChatGPT.");
 
-  // Flow may render Scenes as a custom element, not a button.
-  await chrome.debugger.attach({ tabId: targets.flow.id }, "1.3");
-  let sceneResult = null;
-  try {
-    sceneResult = await evaluate(targets.flow.id, `(() => {
-      const visible = el => {
-        const r = el.getBoundingClientRect();
-        const s = getComputedStyle(el);
-        return r.width > 0 && r.height > 0 &&
-          s.display !== "none" && s.visibility !== "hidden";
-      };
-
-      const all = Array.from(document.querySelectorAll("body *")).filter(visible);
-      const exact = all.filter(el =>
-        (el.innerText || el.textContent || "").trim() === "Scenes"
-      );
-
-      const node = exact.sort((a,b) =>
-        a.getBoundingClientRect().width * a.getBoundingClientRect().height -
-        b.getBoundingClientRect().width * b.getBoundingClientRect().height
-      )[0];
-
-      if (!node) {
-        return {
-          found:false,
-          reason:"Scenes text was not found in the rendered Flow DOM."
-        };
-      }
-
-      const clickable =
-        node.closest("button,[role='button'],a,[role='link']") || node;
-      const r = clickable.getBoundingClientRect();
-      return {
-        found:true,
-        tag:clickable.tagName,
-        role:clickable.getAttribute("role") || "",
-        text:(clickable.innerText || clickable.textContent || "").trim().slice(0,100),
-        x:r.left+r.width/2,
-        y:r.top+r.height/2
-      };
-    })()`);
-    if (!sceneResult?.found) throw new Error("Scenes navigation control was not found. " + JSON.stringify(sceneResult || {}));
-    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {type:"mouseMoved", x:sceneResult.x, y:sceneResult.y});
-    await new Promise(r => setTimeout(r,75));
-    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {type:"mousePressed", x:sceneResult.x, y:sceneResult.y, button:"left", clickCount:1});
-    await new Promise(r => setTimeout(r,50));
-    await sendCommand(targets.flow.id, "Input.dispatchMouseEvent", {type:"mouseReleased", x:sceneResult.x, y:sceneResult.y, button:"left", clickCount:1});
-    await new Promise(r => setTimeout(r,800));
-  } finally {
-    await chrome.debugger.detach({ tabId: targets.flow.id }).catch(() => {});
-  }
-
+  // Flow is assumed to already be on Scenes/video composer.
+  // Reuse the exact same prepareFlow path proven by TEST DIRECT TEXT -> FLOW.
   const flowResult = await prepareFlow(targets.flow, lastAssistantText);
+
   return {
     ok: Boolean(flowResult?.ready),
     status: flowResult?.ready ? "LAST_CHATGPT_TO_FLOW_READY" : "LAST_CHATGPT_TO_FLOW_FAILED",
@@ -1287,7 +1242,6 @@ async function moveLastChatToFlow() {
       textLength: lastAssistantText.length,
       preview: lastAssistantText.slice(0, 300)
     },
-    scene: sceneResult,
     flow: flowResult
   };
 }
