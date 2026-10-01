@@ -415,7 +415,6 @@ async function prepareFlow(flowTab, compiledPrompt) {
     if (!focused?.ok || !focused.activeIsPromptEditor) {
       return {
         reason: "Flow prompt editor could not be focused.",
-        reason: "Exact Flow ProseMirror editor could not be focused.",
         target,
         focused
       };
@@ -505,7 +504,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
       return {
         ready: false,
         reason:
-          "Input.insertText completed, but the exact Flow ProseMirror editor did not contain the compiled prompt.",
+          "Input.insertText completed, but the live Flow prompt editor did not contain the compiled prompt.",
         target,
         focused,
         verification
