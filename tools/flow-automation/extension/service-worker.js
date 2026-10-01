@@ -1450,13 +1450,17 @@ async function moveLastChatToFlow() {
   let chatSnapshot = null;
   try {
     chatSnapshot = await evaluate(targets.chat.id, `(() => {
-  const messages = Array.from(
-    document.querySelectorAll('[data-message-author-role="assistant"]')
+  const headers = Array.from(
+    document.querySelectorAll('h4[data-conversation-role="assistant"]')
   );
+  const messages = headers
+    .map(header => header.closest('[data-chatgpt-selection-message-id]'))
+    .filter(Boolean);
   const last = messages[messages.length - 1];
   return {
     count: messages.length,
-    text: last ? (last.innerText || last.textContent || "").trim() : ""
+    text: last ? (last.innerText || last.textContent || "").trim() : "",
+    messageId: last ? (last.getAttribute("data-chatgpt-selection-message-id") || "") : ""
   };
 })()`);
     lastAssistantText = String(chatSnapshot?.text || "").trim();
