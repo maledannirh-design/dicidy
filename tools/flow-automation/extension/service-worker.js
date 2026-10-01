@@ -480,6 +480,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
       };
     })()`);
 
+    
     if (!verification?.found) {
       return {
         ready: false,
