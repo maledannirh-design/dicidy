@@ -7,6 +7,7 @@
       getComputedStyle(el).visibility !== "hidden" &&
       getComputedStyle(el).display !== "none";
   };
+  
   const iconNames = b => $$("i", b).map(i => (i.textContent || "").trim());
   const SUBMIT_ICONS = ["arrow_forward", "arrow_upward", "send", "north_east"];
   const CHIP_RE = /Nano Banana|Veo|Omni|Imagen/i;
