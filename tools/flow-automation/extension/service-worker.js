@@ -1430,37 +1430,34 @@ async function waitForNewDownload(startTimeMs, timeoutMs = 120000) {
 }
 
 async function testChatToFlowHandoff() {
-  const jobResponse = await bridgeRequest("/api/job");
-  const job = jobResponse.job;
-  if (!job) throw new Error("No local job.json available.");
-
-  const item = Array.isArray(job.jobs) ? job.jobs[0] : null;
-  if (!item || !item.prompt) throw new Error("job.json has no usable first prompt.");
-
+  // PURE HANDOFF TEST:
+  // Do not depend on local job.json or the localhost bridge.
+  // This test must prove only:
+  // 1) Extension -> ChatGPT can submit a known diagnostic prompt.
+  // 2) The new ChatGPT assistant response can be read.
+  // 3) That response can be inserted into the already-open Flow composer.
   const targets = await findTargets();
   if (!targets.chat) throw new Error("Dedicated ChatGPT room was not found.");
   if (!targets.flow) throw new Error("Google Flow tab was not found.");
 
-  const compilerInstruction =
-`You are the prompt compiler for the DICIDY video-generation workflow.
-Return ONLY one production-ready Google Flow video prompt.
-Do not explain your reasoning.
-Preserve product facts exactly as supplied.
-Make the video vertical 9:16 and suitable for a TikTok affiliate video.
-Do not invent product claims, prices, discounts, specifications, or certifications.
-
-JOB INPUT:
-${item.prompt}`;
+  const testInput =
+`Create a production-ready 10-second vertical 9:16 TikTok Shop affiliate video.
+Product: Blender.
+Product description: Blender bagus murah berkualitas.
+Return ONLY the final Google Flow video prompt in natural Indonesian.
+Do not invent prices, discounts, specifications, certifications, or product claims.`;
 
   const started = Date.now();
-  const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
+  const compiledPrompt = await sendPromptToChat(targets.chat, testInput);
   const chatDoneMs = Date.now() - started;
 
   const flowResult = await prepareFlow(targets.flow, compiledPrompt);
 
   return {
     ok: Boolean(flowResult?.ready),
-    status: flowResult?.ready ? "CHATGPT_TO_FLOW_HANDOFF_READY" : "CHATGPT_TO_FLOW_HANDOFF_FAILED",
+    status: flowResult?.ready
+      ? "CHATGPT_TO_FLOW_HANDOFF_READY"
+      : "CHATGPT_TO_FLOW_HANDOFF_FAILED",
     chatDoneMs,
     promptLength: compiledPrompt.length,
     promptPreview: compiledPrompt.slice(0, 500),
