@@ -3,7 +3,8 @@ const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
 const handoffButton = document.getElementById("handoff");
 const lastChatButton = document.getElementById("lastChat");
-const pasteImageButton = document.getElementById("pasteImage");\nconst buildFlowJobButton = document.getElementById("buildFlowJob");
+const pasteImageButton = document.getElementById("pasteImage");
+const buildFlowJobButton = document.getElementById("buildFlowJob");
 const output = document.getElementById("result");
 
 
