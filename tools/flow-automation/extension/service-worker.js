@@ -1466,7 +1466,7 @@ Do not invent prices, discounts, specifications, certifications, or product clai
   };
 }
 
-async function moveLastChatToFlow() {
+async function moveLastChatToFlow(expectedPrompt = "") {
   const targets = await findTargets();
   if (!targets.chat) throw new Error("Dedicated ChatGPT room was not found.");
   if (!targets.flow) throw new Error("Google Flow tab was not found.");
@@ -1479,42 +1479,43 @@ async function moveLastChatToFlow() {
   let lastAssistantText = "";
   let chatSnapshot = null;
   try {
-    chatSnapshot = await evaluate(targets.chat.id, `(() => {
-  const messages = Array.from(
-    document.querySelectorAll('h4[data-conversation-role="assistant"]')
-  )
-    .map(header => header.parentElement)
-    .filter(Boolean);
+    const started = Date.now();
+    const needle = String(expectedPrompt || "").trim().slice(0, 120);
 
-  const last = messages[messages.length - 1];
+    while (Date.now() - started < 30000) {
+      chatSnapshot = await evaluate(targets.chat.id, `(() => {
+        const messages = Array.from(
+          document.querySelectorAll('h4[data-conversation-role="assistant"]')
+        )
+          .map(header => header.parentElement)
+          .filter(Boolean);
 
-  if (!last) {
-    return {
-      count: 0,
-      text: "",
-      messageId: ""
-    };
-  }
+        const last = messages[messages.length - 1];
 
-  // LIVE DOM VERIFIED:
-  // h4[data-conversation-role="assistant"] is the direct child of
-  // div[data-chatgpt-search-message-ids], and that parent contains the
-  // complete assistant message text.
-  // Remove the sr-only "ChatGPT berkata:" label before extraction.
-  const header = last.querySelector('h4[data-conversation-role="assistant"]');
-  const clone = last.cloneNode(true);
-  clone.querySelector('h4[data-conversation-role="assistant"]')?.remove();
+        if (!last) {
+          return { count: 0, text: "", messageId: "" };
+        }
 
-  const text = (clone.innerText || clone.textContent || "").trim();
+        const clone = last.cloneNode(true);
+        clone.querySelector('h4[data-conversation-role="assistant"]')?.remove();
+        const text = (clone.innerText || clone.textContent || "").trim();
 
-  return {
-    count: messages.length,
-    text,
-    messageId: last.getAttribute("data-chatgpt-search-message-ids") || "",
-    sourceSelector: 'h4[data-conversation-role="assistant"] + parentElement'
-  };
-})()`);
-    lastAssistantText = String(chatSnapshot?.text || "").trim();
+        return {
+          count: messages.length,
+          text,
+          messageId: last.getAttribute("data-chatgpt-search-message-ids") || "",
+          sourceSelector: 'h4[data-conversation-role="assistant"] + parentElement'
+        };
+      })()`);
+
+      lastAssistantText = String(chatSnapshot?.text || "").trim();
+
+      if (lastAssistantText && (!needle || lastAssistantText.includes(needle))) {
+        break;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   } finally {
     await chrome.debugger.detach({ tabId: targets.chat.id }).catch(() => {});
   }
@@ -1601,7 +1602,7 @@ ${item.prompt}`;
   // sendPromptToChat() has already completed and returned the new assistant prompt.
   // moveLastChatToFlow() then performs the same ChatGPT DOM extraction + Flow
   // handoff that is already proven to work from the extension popup.
-  const flowResult = await moveLastChatToFlow();
+  const flowResult = await moveLastChatToFlow(compiledPrompt);
   if (!flowResult?.ok) {
     throw new Error("Prompt handoff failed: " + JSON.stringify(flowResult));
   }
@@ -1618,7 +1619,7 @@ ${item.prompt}`;
     status: generation?.status === "VIDEO_GENERATED" ? "VIDEO_GENERATED" : "FLOW_READY",
     source: "CHATGPT_COMPILE_THEN_LAST_ASSISTANT_TO_FLOW",
     compiledPrompt,
-    prompt: promptResult,
+    prompt: flowResult,
     image: imageResult,
     generation,
     angle: item.angle || null,
