@@ -282,57 +282,70 @@ async function prepareFlow(flowTab, compiledPrompt) {
      */
 
     const target = await evaluate(flowTab.id, `(() => {
-      const el = document.querySelector(
-        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
-      );
+      const visible = el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 &&
+          s.display !== "none" && s.visibility !== "hidden";
+      };
 
-      if (!el) {
-        return {
-          ok: false,
-          reason: "Verified Flow ProseMirror prompt editor was not found.",
-          exactSelector:
-            'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
-        };
-      }
+      const candidates = Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
+      )).filter(visible);
+
+      const score = el => {
+        const host = el.closest('[role="textbox"]');
+        const p = [
+          el.getAttribute("data-placeholder") || "",
+          el.getAttribute("placeholder") || "",
+          host?.getAttribute("data-placeholder") || "",
+          host?.getAttribute("placeholder") || "",
+          el.innerText || "",
+          el.textContent || ""
+        ].join(" ");
+        let s = el.getAttribute("contenteditable") === "true" ? 20 : 0;
+        if (/What do you want to create\?/i.test(p)) s += 1000;
+        if (el.matches('[data-slate-editor="true"]')) s += 100;
+        const r = el.getBoundingClientRect();
+        s += Math.max(0, r.top);
+        return s;
+      };
+
+      const ranked = candidates.map(el => ({el, score:score(el)})).sort((a,b) => b.score-a.score);
+      const el = ranked[0]?.el;
+
+      if (!el) return {
+        ok:false,
+        reason:"Verified Flow contenteditable prompt editor was not found.",
+        candidates:candidates.map(e => ({
+          tag:e.tagName,
+          role:e.getAttribute("role") || "",
+          contenteditable:e.getAttribute("contenteditable") || "",
+          placeholder:e.getAttribute("data-placeholder") || e.getAttribute("placeholder") || "",
+          text:(e.innerText || e.textContent || "").trim().slice(0,160)
+        }))
+      };
 
       const r = el.getBoundingClientRect();
-      const s = getComputedStyle(el);
-
-      if (
-        r.width <= 0 ||
-        r.height <= 0 ||
-        s.display === "none" ||
-        s.visibility === "hidden"
-      ) {
-        return {
-          ok: false,
-          reason: "Verified Flow ProseMirror prompt editor exists but is not visible.",
-          rect: {
-            left: r.left,
-            top: r.top,
-            width: r.width,
-            height: r.height
-          }
-        };
-      }
-
+      const host = el.closest('[role="textbox"]');
+      const hr = host?.getBoundingClientRect();
+      const box = hr || r;
       return {
-        ok: true,
-        tag: el.tagName,
-        className: el.className,
-        contenteditable: el.getAttribute("contenteditable") || "",
-        currentText: (el.innerText || el.textContent || "").trim(),
-        rect: {
-          left: r.left,
-          top: r.top,
-          width: r.width,
-          height: r.height
-        },
-        x: r.left + Math.min(Math.max(r.width / 2, 20), Math.max(r.width - 20, 20)),
-        y: r.top + Math.min(Math.max(r.height / 2, 10), Math.max(r.height - 10, 10))
+        ok:true,
+        tag:el.tagName,
+        role:el.getAttribute("role") || "",
+        contenteditable:el.getAttribute("contenteditable") || "",
+        placeholder:el.getAttribute("data-placeholder") || el.getAttribute("placeholder") ||
+          host?.getAttribute("data-placeholder") || host?.getAttribute("placeholder") || "",
+        currentText:(el.innerText || el.textContent || "").trim(),
+        rect:{left:r.left,top:r.top,width:r.width,height:r.height},
+        x:box.left + Math.min(box.width / 2, 300),
+        y:box.top + Math.min(box.height / 2, 30)
       };
     })()`);
-
     if (!target?.ok) {
       return {
         ready: false,
@@ -366,37 +379,42 @@ async function prepareFlow(flowTab, compiledPrompt) {
 
     // Focus the exact editor and place the caret at the end.
     const focused = await evaluate(flowTab.id, `(() => {
-      const el = document.querySelector(
-        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
-      );
-
-      if (!el) return { ok: false, reason: "Exact ProseMirror editor disappeared after click." };
-
+      const candidates = Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
+      )).filter(el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden";
+      });
+      const el = candidates.find(e => /What do you want to create\?/i.test([
+        e.getAttribute("data-placeholder") || "",
+        e.getAttribute("placeholder") || "",
+        e.closest('[role="textbox"]')?.getAttribute("data-placeholder") || "",
+        e.closest('[role="textbox"]')?.getAttribute("placeholder") || ""
+      ].join(" "))) || candidates.sort((a,b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0];
+      if (!el) return {ok:false, reason:"Flow prompt editor could not be focused."};
       el.focus();
-
       const selection = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
-
       const active = document.activeElement;
-
       return {
-        ok: true,
-        activeIsExactEditor:
-          active === el &&
-          active.getAttribute("contenteditable") === "true",
-        activeTag: active?.tagName || "",
-        activeClass: active?.className || "",
-        selectionRangeCount: selection?.rangeCount || 0
+        ok:true,
+        activeIsPromptEditor:active === el && active.getAttribute("contenteditable") === "true",
+        activeTag:active?.tagName || "",
+        activeClass:active?.className || "",
+        selectionRangeCount:selection?.rangeCount || 0
       };
     })()`);
-
-    if (!focused?.ok || !focused.activeIsExactEditor) {
+    if (!focused?.ok || !focused.activeIsPromptEditor) {
       return {
-        ready: false,
+        reason: "Flow prompt editor could not be focused.",
         reason: "Exact Flow ProseMirror editor could not be focused.",
         target,
         focused
@@ -456,30 +474,33 @@ async function prepareFlow(flowTab, compiledPrompt) {
 
     // Verify the exact ProseMirror editor, not a generic contenteditable.
     const verification = await evaluate(flowTab.id, `(() => {
-      const el = document.querySelector(
-        'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
-      );
-
-      if (!el) {
-        return {
-          found: false,
-          reason: "Exact ProseMirror editor disappeared during verification."
-        };
-      }
-
+      const candidates = Array.from(document.querySelectorAll(
+        '[role="textbox"][contenteditable="true"],' +
+        '[role="textbox"] [contenteditable="true"],' +
+        '[data-slate-editor="true"][contenteditable="true"],' +
+        '[contenteditable="true"]'
+      )).filter(el => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden";
+      });
+      const el = candidates.find(e => /What do you want to create\?/i.test([
+        e.getAttribute("data-placeholder") || "",
+        e.getAttribute("placeholder") || "",
+        e.closest('[role="textbox"]')?.getAttribute("data-placeholder") || "",
+        e.closest('[role="textbox"]')?.getAttribute("placeholder") || ""
+      ].join(" "))) || candidates.sort((a,b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0];
+      if (!el) return {found:false, reason:"Flow prompt editor not found during verification."};
       const text = (el.innerText || el.textContent || "").trim();
       const needle = ${JSON.stringify(String(compiledPrompt).slice(0, 80))};
-
       return {
-        found: Boolean(needle && text.includes(needle)),
-        textLength: text.length,
-        preview: text.slice(0, 300),
-        expectedPreview: needle,
-        activeIsExactEditor: document.activeElement === el
+        found:Boolean(needle && text.includes(needle)),
+        textLength:text.length,
+        preview:text.slice(0,300),
+        expectedPreview:needle,
+        activeIsPromptEditor:document.activeElement === el
       };
     })()`);
-
-    
     if (!verification?.found) {
       return {
         ready: false,
