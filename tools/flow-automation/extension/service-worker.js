@@ -1483,6 +1483,30 @@ async function moveLastChatToFlow() {
   };
 }
 
+async function buildFlowJob() {
+  // Combined proven handoff only:
+  // 1) read the LAST existing ChatGPT assistant message and put it into Flow
+  // 2) paste the IMAGE already in the Windows/browser clipboard into Flow
+  // 3) stop. Operator controls model/ratio/credits and clicks Generate manually.
+  const promptResult = await moveLastChatToFlow();
+  if (!promptResult?.ok) {
+    throw new Error("Prompt handoff failed: " + JSON.stringify(promptResult));
+  }
+
+  const imageResult = await pasteClipboardImageToFlow();
+  if (!imageResult?.ok) {
+    throw new Error("Image handoff failed: " + JSON.stringify(imageResult));
+  }
+
+  return {
+    ok: true,
+    status: "FLOW_JOB_READY",
+    prompt: promptResult,
+    image: imageResult,
+    next: "Operator can now set Flow options and click Generate manually."
+  };
+}
+
 async function runOneJob() {
   const jobResponse = await bridgeRequest("/api/job");
   const job = jobResponse.job;
@@ -1624,6 +1648,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     moveLastChatToFlow()
       .then(result => sendResponse({ ok: true, ...result }))
       .catch(error => sendResponse({ ok: false, status: "ERROR", error: error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_BUILD_FLOW_JOB") {
+    buildFlowJob()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
     return true;
   }
 
