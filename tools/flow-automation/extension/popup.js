@@ -1,7 +1,6 @@
 const testButton = document.getElementById("test");
 const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
-const handoffButton = document.getElementById("handoff");
 const lastChatButton = document.getElementById("lastChat");
 const pasteImageButton = document.getElementById("pasteImage");
 const buildFlowJobButton = document.getElementById("buildFlowJob");
@@ -52,7 +51,6 @@ directButton.addEventListener("click", async () => {
 handoffButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
-  handoffButton.disabled = true;
   runButton.disabled = true;
   output.textContent = "Testing ChatGPT → Flow only… no image, generate, or download.";
   try {
@@ -63,8 +61,7 @@ handoffButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     directButton.disabled = false;
-    handoffButton.disabled = false;
-    runButton.disabled = false;
+      runButton.disabled = false;
     lastChatButton.disabled = false;
   }
 });
@@ -72,7 +69,6 @@ handoffButton.addEventListener("click", async () => {
 lastChatButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
-  handoffButton.disabled = true;
   lastChatButton.disabled = true;
   runButton.disabled = true;
   output.textContent =
@@ -86,8 +82,7 @@ lastChatButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     directButton.disabled = false;
-    handoffButton.disabled = false;
-    lastChatButton.disabled = false;
+      lastChatButton.disabled = false;
     runButton.disabled = false;
   }
 });
@@ -95,7 +90,6 @@ lastChatButton.addEventListener("click", async () => {
 pasteImageButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
-  handoffButton.disabled = true;
   lastChatButton.disabled = true;
   pasteImageButton.disabled = true;
   runButton.disabled = true;
@@ -110,8 +104,7 @@ pasteImageButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     directButton.disabled = false;
-    handoffButton.disabled = false;
-    lastChatButton.disabled = false;
+      lastChatButton.disabled = false;
     pasteImageButton.disabled = false;
     runButton.disabled = false;
   }
@@ -120,7 +113,6 @@ pasteImageButton.addEventListener("click", async () => {
 buildFlowJobButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
-  handoffButton.disabled = true;
   lastChatButton.disabled = true;
   pasteImageButton.disabled = true;
   buildFlowJobButton.disabled = true;
@@ -136,8 +128,7 @@ buildFlowJobButton.addEventListener("click", async () => {
   } finally {
     testButton.disabled = false;
     directButton.disabled = false;
-    handoffButton.disabled = false;
-    lastChatButton.disabled = false;
+      lastChatButton.disabled = false;
     pasteImageButton.disabled = false;
     buildFlowJobButton.disabled = false;
     runButton.disabled = false;
