@@ -1562,38 +1562,20 @@ async function buildFlowJob() {
 }
 
 async function runWebJob(job) {
-  if (!job || !Array.isArray(job.jobs) || !job.jobs.length) {
-    throw new Error("Tidak ada job video yang valid dari Content Factory.");
-  }
-
-  const item = job.jobs[0];
-  if (!item?.prompt) throw new Error("Job video tidak memiliki prompt.");
-
+  // ONE-BUTTON VIDEO FLOW:
+  // The Content Factory already copied the product image into the OS clipboard.
+  // Do NOT send a new compiler prompt to ChatGPT here.
+  // Reuse the proven MOVE LAST CHATGPT -> FLOW path, then paste the
+  // clipboard image, then generate.
   const targets = await findTargets();
   if (!targets.chat) throw new Error("Tab ChatGPT DICIDY tidak ditemukan.");
   if (!targets.flow) throw new Error("Tab Google Flow tidak ditemukan.");
 
-  const compilerInstruction =
-`You are the prompt compiler for the DICIDY video-generation workflow.
-Return ONLY one production-ready Google Flow video prompt.
-Do not explain your reasoning.
-Preserve all product facts exactly as supplied.
-Make the video vertical 9:16 and suitable for a TikTok affiliate video.
-Do not invent product claims, prices, discounts, specifications, or certifications.
-Write the final video prompt entirely in natural Indonesian.
-
-JOB INPUT:
-${item.prompt}`;
-
-  const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
-  const flowResult = await prepareFlow(targets.flow, compiledPrompt);
-
-  if (!flowResult?.ready) {
-    throw new Error("Prompt berhasil dibuat di ChatGPT tetapi belum berhasil masuk ke Google Flow.");
+  const promptResult = await moveLastChatToFlow();
+  if (!promptResult?.ok) {
+    throw new Error("Prompt handoff failed: " + JSON.stringify(promptResult));
   }
 
-  // The Content Factory button has already copied the selected product image
-  // into the OS clipboard. Reuse the proven clipboard → Flow ingredient path.
   const imageResult = await pasteClipboardImageToFlow();
   if (!imageResult?.ok) {
     throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
@@ -1604,12 +1586,12 @@ ${item.prompt}`;
 
   const result = {
     status: generation?.status === "VIDEO_GENERATED" ? "VIDEO_GENERATED" : "FLOW_READY",
-    compiledPrompt,
-    flow: flowResult,
+    source: "LAST_CHATGPT_TO_FLOW",
+    prompt: promptResult,
     image: imageResult,
     generation,
-    angle: item.angle || null,
-    timestamp: new Date().toISOString()
+    angle: job?.jobs?.[0]?.angle || null,
+    timestamp:new Date().toISOString()
   };
 
   await bridgeRequest("/api/result", {
