@@ -46,7 +46,6 @@
     <p>Phase 3 handoff controls for your existing Chrome session. The last-chat button does NOT create a new ChatGPT prompt.</p>
     <button id="test">TEST EXISTING CHROME</button>
     <button id="direct" style="margin-top:8px;">TEST DIRECT TEXT → FLOW</button>
-    <button id="handoff" style="margin-top:8px;">TEST CHATGPT → FLOW</button>
     <button id="lastChat" style="margin-top:8px;">MOVE LAST CHATGPT → FLOW</button>
     <button id="pasteImage" style="margin-top:8px;">PASTE COPIED IMAGE → FLOW</button>
     <button id="buildFlowJob" style="margin-top:8px;">BUILD FLOW JOB</button>
@@ -55,7 +54,7 @@
     <pre id="result">Waiting for test…</pre>
     <p class="note">MOVE LAST CHATGPT → FLOW reads the latest assistant message already on screen, puts that exact text into the Flow composer, and stops. No new ChatGPT prompt, no Generate, no image, no download.</p>
     <p class="note">BUILD FLOW JOB combines the two proven handoffs: latest ChatGPT prompt + clipboard image → Flow. It stops before Generate.</p>
-    <p class="note">RUN 1 JOB is kept separately for the later full automation phase.</p>
+    <p class="note">RUN 1 VIDEO → FLOW is the full automation phase.</p>
   </main>
   <script src="popup.js"></script>
 </body>
