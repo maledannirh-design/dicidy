@@ -6,6 +6,7 @@ const lastChatButton = document.getElementById("lastChat");
 const pasteImageButton = document.getElementById("pasteImage");\nconst buildFlowJobButton = document.getElementById("buildFlowJob");
 const output = document.getElementById("result");
 
+
 async function send(type) {
   return chrome.runtime.sendMessage({ type });
 }
