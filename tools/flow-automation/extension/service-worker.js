@@ -628,7 +628,7 @@ async function pasteClipboardImageToFlow() {
 
     await new Promise(r => setTimeout(r, 1200));
 
-    const verification = await evaluate(flowTab.id, \`(() => {
+    const verification = await evaluate(flowTab.id, `(() => {
       const ingredient = document.querySelector(
         'flow-image-ingredient-chip button.chip-container[aria-label="Ingredient"]'
       );
@@ -649,7 +649,7 @@ async function pasteClipboardImageToFlow() {
         ingredientHtml: ingredientComponent?.outerHTML?.slice(0,1200) || "",
         text:(editor?.innerText || editor?.textContent || "").trim().slice(0,300)
       };
-    })()\`);
+    })()`);
 
     return {
       ready:true,
