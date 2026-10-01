@@ -1479,43 +1479,36 @@ async function moveLastChatToFlow(expectedPrompt = "") {
   let lastAssistantText = "";
   let chatSnapshot = null;
   try {
-    const started = Date.now();
-    const needle = String(expectedPrompt || "").trim().slice(0, 120);
+    chatSnapshot = await evaluate(targets.chat.id, `(() => {
+  const messages = Array.from(
+    document.querySelectorAll('h4[data-conversation-role="assistant"]')
+  )
+    .map(header => header.parentElement)
+    .filter(Boolean);
 
-    while (Date.now() - started < 30000) {
-      chatSnapshot = await evaluate(targets.chat.id, `(() => {
-        const messages = Array.from(
-          document.querySelectorAll('h4[data-conversation-role="assistant"]')
-        )
-          .map(header => header.parentElement)
-          .filter(Boolean);
+  const last = messages[messages.length - 1];
 
-        const last = messages[messages.length - 1];
+  if (!last) {
+    return {
+      count: 0,
+      text: "",
+      messageId: ""
+    };
+  }
 
-        if (!last) {
-          return { count: 0, text: "", messageId: "" };
-        }
+  const clone = last.cloneNode(true);
+  clone.querySelector('h4[data-conversation-role="assistant"]')?.remove();
 
-        const clone = last.cloneNode(true);
-        clone.querySelector('h4[data-conversation-role="assistant"]')?.remove();
-        const text = (clone.innerText || clone.textContent || "").trim();
+  const text = (clone.innerText || clone.textContent || "").trim();
 
-        return {
-          count: messages.length,
-          text,
-          messageId: last.getAttribute("data-chatgpt-search-message-ids") || "",
-          sourceSelector: 'h4[data-conversation-role="assistant"] + parentElement'
-        };
-      })()`);
-
-      lastAssistantText = String(chatSnapshot?.text || "").trim();
-
-      if (lastAssistantText && (!needle || lastAssistantText.includes(needle))) {
-        break;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  return {
+    count: messages.length,
+    text,
+    messageId: last.getAttribute("data-chatgpt-search-message-ids") || "",
+    sourceSelector: 'h4[data-conversation-role="assistant"] + parentElement'
+  };
+})()`);
+    lastAssistantText = String(chatSnapshot?.text || "").trim();
   } finally {
     await chrome.debugger.detach({ tabId: targets.chat.id }).catch(() => {});
   }
@@ -1602,7 +1595,7 @@ ${item.prompt}`;
   // sendPromptToChat() has already completed and returned the new assistant prompt.
   // moveLastChatToFlow() then performs the same ChatGPT DOM extraction + Flow
   // handoff that is already proven to work from the extension popup.
-  const flowResult = await moveLastChatToFlow(compiledPrompt);
+  const flowResult = await moveLastChatToFlow();
   if (!flowResult?.ok) {
     throw new Error("Prompt handoff failed: " + JSON.stringify(flowResult));
   }
