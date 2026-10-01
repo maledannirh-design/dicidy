@@ -27,7 +27,8 @@
     {
       "matches": [
         "https://flow.google.com/*",
-        "https://labs.google/*"
+        "https://labs.google/*",
+        "https://dicidy.my.id/*"
       ],
       "js": [
         "content.js"
