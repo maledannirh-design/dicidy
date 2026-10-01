@@ -1450,17 +1450,38 @@ async function moveLastChatToFlow() {
   let chatSnapshot = null;
   try {
     chatSnapshot = await evaluate(targets.chat.id, `(() => {
-  const headers = Array.from(
+  const messages = Array.from(
     document.querySelectorAll('h4[data-conversation-role="assistant"]')
-  );
-  const messages = headers
-    .map(header => header.closest('[data-chatgpt-selection-message-id]'))
+  )
+    .map(header => header.parentElement)
     .filter(Boolean);
+
   const last = messages[messages.length - 1];
+
+  if (!last) {
+    return {
+      count: 0,
+      text: "",
+      messageId: ""
+    };
+  }
+
+  // LIVE DOM VERIFIED:
+  // h4[data-conversation-role="assistant"] is the direct child of
+  // div[data-chatgpt-search-message-ids], and that parent contains the
+  // complete assistant message text.
+  // Remove the sr-only "ChatGPT berkata:" label before extraction.
+  const header = last.querySelector('h4[data-conversation-role="assistant"]');
+  const clone = last.cloneNode(true);
+  clone.querySelector('h4[data-conversation-role="assistant"]')?.remove();
+
+  const text = (clone.innerText || clone.textContent || "").trim();
+
   return {
     count: messages.length,
-    text: last ? (last.innerText || last.textContent || "").trim() : "",
-    messageId: last ? (last.getAttribute("data-chatgpt-selection-message-id") || "") : ""
+    text,
+    messageId: last.getAttribute("data-chatgpt-search-message-ids") || "",
+    sourceSelector: 'h4[data-conversation-role="assistant"] + parentElement'
   };
 })()`);
     lastAssistantText = String(chatSnapshot?.text || "").trim();
