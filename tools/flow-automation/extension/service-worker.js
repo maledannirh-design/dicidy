@@ -628,32 +628,34 @@ async function pasteClipboardImageToFlow() {
 
     await new Promise(r => setTimeout(r, 1200));
 
-    const verification = await evaluate(flowTab.id, `(() => {
+    const verification = await evaluate(flowTab.id, \`(() => {
+      const ingredient = document.querySelector(
+        'flow-image-ingredient-chip button.chip-container[aria-label="Ingredient"]'
+      );
+
+      const ingredientComponent = document.querySelector(
+        'flow-image-ingredient-chip'
+      );
+
       const editor = document.querySelector(
         'flow-rich-text-editor.prompt-input .prosemirror-editor .ProseMirror[contenteditable="true"]'
       );
-      if (!editor) return {found:false,reason:"Editor disappeared after paste."};
-
-      const imgs = Array.from(editor.querySelectorAll("img")).map(img => ({
-        srcPrefix:String(img.currentSrc || img.src || "").slice(0,120),
-        alt:img.alt || "",
-        width:img.getBoundingClientRect().width,
-        height:img.getBoundingClientRect().height
-      }));
 
       return {
-        found:true,
-        imageCount:imgs.length,
-        images:imgs,
-        text:(editor.innerText || editor.textContent || "").trim().slice(0,300),
-        html:editor.innerHTML.slice(0,1000)
+        found: Boolean(ingredient),
+        ingredientComponentFound: Boolean(ingredientComponent),
+        ingredientButtonFound: Boolean(ingredient),
+        ariaBusy: ingredient?.getAttribute("aria-busy") || "",
+        ingredientHtml: ingredientComponent?.outerHTML?.slice(0,1200) || "",
+        text:(editor?.innerText || editor?.textContent || "").trim().slice(0,300)
       };
-    })()`);
+    })()\`);
 
     return {
       ready:true,
       pasteDispatched:true,
-      verification
+      verification,
+      ok:Boolean(verification?.found)
     };
   } finally {
     await chrome.debugger.detach({ tabId:flowTab.id }).catch(() => {});
