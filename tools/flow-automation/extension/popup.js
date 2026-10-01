@@ -3,7 +3,7 @@ const runButton = document.getElementById("run");
 const directButton = document.getElementById("direct");
 const handoffButton = document.getElementById("handoff");
 const lastChatButton = document.getElementById("lastChat");
-const pasteImageButton = document.getElementById("pasteImage");
+const pasteImageButton = document.getElementById("pasteImage");\nconst buildFlowJobButton = document.getElementById("buildFlowJob");
 const output = document.getElementById("result");
 
 async function send(type) {
@@ -112,6 +112,33 @@ pasteImageButton.addEventListener("click", async () => {
     handoffButton.disabled = false;
     lastChatButton.disabled = false;
     pasteImageButton.disabled = false;
+    runButton.disabled = false;
+  }
+});
+
+buildFlowJobButton.addEventListener("click", async () => {
+  testButton.disabled = true;
+  directButton.disabled = true;
+  handoffButton.disabled = true;
+  lastChatButton.disabled = true;
+  pasteImageButton.disabled = true;
+  buildFlowJobButton.disabled = true;
+  runButton.disabled = true;
+  output.textContent =
+    "Building Flow job: LAST ChatGPT prompt + clipboard image. Generate stays manual.";
+
+  try {
+    const result = await send("DICIDY_BUILD_FLOW_JOB");
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    output.textContent = "ERROR: " + error.message;
+  } finally {
+    testButton.disabled = false;
+    directButton.disabled = false;
+    handoffButton.disabled = false;
+    lastChatButton.disabled = false;
+    pasteImageButton.disabled = false;
+    buildFlowJobButton.disabled = false;
     runButton.disabled = false;
   }
 });
