@@ -84,3 +84,29 @@
     return true;
   });
 })();
+
+  window.addEventListener("message", event => {
+    if (event.source !== window) return;
+    const data = event.data;
+    if (!data || data.source !== "DICIDY_CONTENT_FACTORY" || data.type !== "DICIDY_RUN_VIDEO") return;
+
+    chrome.runtime.sendMessage({
+      type: "DICIDY_RUN_WEB_JOB",
+      requestId: data.requestId || "",
+      job: data.job
+    }).then(result => {
+      window.postMessage({
+        source: "DICIDY_FLOW_BRIDGE",
+        type: "DICIDY_RUN_VIDEO_RESULT",
+        requestId: data.requestId || "",
+        result
+      }, "*");
+    }).catch(error => {
+      window.postMessage({
+        source: "DICIDY_FLOW_BRIDGE",
+        type: "DICIDY_RUN_VIDEO_RESULT",
+        requestId: data.requestId || "",
+        result: {ok:false,error:error.message}
+      }, "*");
+    });
+  });
