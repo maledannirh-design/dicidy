@@ -149,7 +149,7 @@ runButton.addEventListener("click", async () => {
   testButton.disabled = true;
   runButton.disabled = true;
   output.textContent =
-    "Running 1-job handoff. ChatGPT will compile the prompt; Flow will receive it. Generate is NOT clicked.";
+    "Menjalankan 1 video: ChatGPT membuat prompt → Flow menerima gambar + prompt → Generate otomatis. Video tidak diunduh otomatis.";
 
   try {
     const result = await send("DICIDY_RUN_ONE_JOB");
