@@ -1563,14 +1563,40 @@ async function buildFlowJob() {
 
 async function runWebJob(job) {
   // ONE-BUTTON VIDEO FLOW:
-  // The Content Factory already copied the product image into the OS clipboard.
-  // Do NOT send a new compiler prompt to ChatGPT here.
-  // Reuse the proven MOVE LAST CHATGPT -> FLOW path, then paste the
-  // clipboard image, then generate.
+  // 1) Content Factory job prompt -> ChatGPT compiler (new production prompt)
+  // 2) Reuse the proven MOVE LAST CHATGPT -> FLOW path to move that
+  //    newly produced assistant message into Flow.
+  // 3) Paste the product image already copied into the OS clipboard.
+  // 4) Generate automatically; do not download the MP4.
+  if (!job || !Array.isArray(job.jobs) || !job.jobs.length) {
+    throw new Error("Tidak ada job video yang valid dari Content Factory.");
+  }
+
+  const item = job.jobs[0];
+  if (!item?.prompt) throw new Error("Job video tidak memiliki prompt.");
+
   const targets = await findTargets();
   if (!targets.chat) throw new Error("Tab ChatGPT DICIDY tidak ditemukan.");
   if (!targets.flow) throw new Error("Tab Google Flow tidak ditemukan.");
 
+  const compilerInstruction =
+`You are the prompt compiler for the DICIDY video-generation workflow.
+Return ONLY one production-ready Google Flow video prompt.
+Do not explain your reasoning.
+Preserve all product facts exactly as supplied.
+Make the video vertical 9:16 and suitable for a TikTok affiliate video.
+Target duration: 10 seconds unless the JOB INPUT explicitly specifies another duration.
+Do not invent product claims, prices, discounts, specifications, or certifications.
+Write the final video prompt entirely in natural Indonesian.
+
+JOB INPUT:
+${item.prompt}`;
+
+  // FIRST: actually produce the final prompt in ChatGPT.
+  const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
+
+  // SECOND: use the same proven last-assistant -> Flow mechanism.
+  // This deliberately does not type the compiled text into Flow directly.
   const promptResult = await moveLastChatToFlow();
   if (!promptResult?.ok) {
     throw new Error("Prompt handoff failed: " + JSON.stringify(promptResult));
@@ -1581,16 +1607,16 @@ async function runWebJob(job) {
     throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
   }
 
-  // Generate automatically, but deliberately do NOT download the MP4.
   const generation = await generateAndDownloadOne(targets.flow, { download:false });
 
   const result = {
     status: generation?.status === "VIDEO_GENERATED" ? "VIDEO_GENERATED" : "FLOW_READY",
-    source: "LAST_CHATGPT_TO_FLOW",
+    source: "CHATGPT_COMPILE_THEN_LAST_ASSISTANT_TO_FLOW",
+    compiledPrompt,
     prompt: promptResult,
     image: imageResult,
     generation,
-    angle: job?.jobs?.[0]?.angle || null,
+    angle: item.angle || null,
     timestamp:new Date().toISOString()
   };
 
