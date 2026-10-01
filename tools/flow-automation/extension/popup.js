@@ -48,24 +48,6 @@ directButton.addEventListener("click", async () => {
 });
 
 
-handoffButton.addEventListener("click", async () => {
-  testButton.disabled = true;
-  directButton.disabled = true;
-  runButton.disabled = true;
-  output.textContent = "Testing ChatGPT → Flow only… no image, generate, or download.";
-  try {
-    const result = await send("DICIDY_TEST_CHAT_TO_FLOW");
-    output.textContent = JSON.stringify(result, null, 2);
-  } catch (error) {
-    output.textContent = "ERROR: " + error.message;
-  } finally {
-    testButton.disabled = false;
-    directButton.disabled = false;
-      runButton.disabled = false;
-    lastChatButton.disabled = false;
-  }
-});
-
 lastChatButton.addEventListener("click", async () => {
   testButton.disabled = true;
   directButton.disabled = true;
