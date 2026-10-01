@@ -1596,16 +1596,17 @@ ${item.prompt}`;
   // FIRST: actually produce the final prompt in ChatGPT.
   const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
 
-  // SECOND: compose the proven manual steps directly.
-  // Do NOT re-read ChatGPT and do NOT call moveLastChatToFlow().
-  // sendPromptToChat() already returned the exact final assistant prompt.
-  // Reuse the same proven prepareFlow() used by the manual Flow handoff.
-  const flowResult = await prepareFlow(targets.flow, compiledPrompt);
-  if (!flowResult?.ready) {
+  // SECOND: use the EXACT proven manual MOVE LAST CHATGPT -> FLOW action.
+  // Do not create a parallel handoff implementation here.
+  // sendPromptToChat() has already completed and returned the new assistant prompt.
+  // moveLastChatToFlow() then performs the same ChatGPT DOM extraction + Flow
+  // handoff that is already proven to work from the extension popup.
+  const flowResult = await moveLastChatToFlow();
+  if (!flowResult?.ok) {
     throw new Error("Prompt handoff failed: " + JSON.stringify(flowResult));
   }
 
-  // THIRD: reuse the proven PASTE COPIED IMAGE -> FLOW function.
+  // THIRD: use the EXACT proven PASTE COPIED IMAGE -> FLOW action.
   const imageResult = await pasteClipboardImageToFlow();
   if (!imageResult?.ok) {
     throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
