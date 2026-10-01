@@ -992,7 +992,8 @@ async function testFlowDirectInput() {
   }
 }
 
-async function generateAndDownloadOne(flowTab) {
+async function generateAndDownloadOne(flowTab, options = {}) {
+  const downloadFile = options.download !== false;
   const downloadStartedAt = Date.now();
 
   await chrome.debugger.attach({ tabId: flowTab.id }, "1.3");
@@ -1312,6 +1313,15 @@ async function generateAndDownloadOne(flowTab) {
       })()`);
 
       if (lastState && lastState.ready) {
+        if (!downloadFile) {
+          return {
+            submitted,
+            video:lastState,
+            download:{skipped:true},
+            status:"VIDEO_GENERATED"
+          };
+        }
+
         const downloadClicked = await evaluate(flowTab.id, `(() => {
           const isVisible = node => {
             const r = node.getBoundingClientRect();
@@ -1535,6 +1545,65 @@ async function buildFlowJob() {
   };
 }
 
+async function runWebJob(job) {
+  if (!job || !Array.isArray(job.jobs) || !job.jobs.length) {
+    throw new Error("Tidak ada job video yang valid dari Content Factory.");
+  }
+
+  const item = job.jobs[0];
+  if (!item?.prompt) throw new Error("Job video tidak memiliki prompt.");
+
+  const targets = await findTargets();
+  if (!targets.chat) throw new Error("Tab ChatGPT DICIDY tidak ditemukan.");
+  if (!targets.flow) throw new Error("Tab Google Flow tidak ditemukan.");
+
+  const compilerInstruction =
+`You are the prompt compiler for the DICIDY video-generation workflow.
+Return ONLY one production-ready Google Flow video prompt.
+Do not explain your reasoning.
+Preserve all product facts exactly as supplied.
+Make the video vertical 9:16 and suitable for a TikTok affiliate video.
+Do not invent product claims, prices, discounts, specifications, or certifications.
+Write the final video prompt entirely in natural Indonesian.
+
+JOB INPUT:
+${item.prompt}`;
+
+  const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
+  const flowResult = await prepareFlow(targets.flow, compiledPrompt);
+
+  if (!flowResult?.ready) {
+    throw new Error("Prompt berhasil dibuat di ChatGPT tetapi belum berhasil masuk ke Google Flow.");
+  }
+
+  // The Content Factory button has already copied the selected product image
+  // into the OS clipboard. Reuse the proven clipboard → Flow ingredient path.
+  const imageResult = await pasteClipboardImageToFlow();
+  if (!imageResult?.ok) {
+    throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
+  }
+
+  // Generate automatically, but deliberately do NOT download the MP4.
+  const generation = await generateAndDownloadOne(targets.flow, { download:false });
+
+  const result = {
+    status: generation?.status === "VIDEO_GENERATED" ? "VIDEO_GENERATED" : "FLOW_READY",
+    compiledPrompt,
+    flow: flowResult,
+    image: imageResult,
+    generation,
+    angle: item.angle || null,
+    timestamp: new Date().toISOString()
+  };
+
+  await bridgeRequest("/api/result", {
+    method:"POST",
+    body:JSON.stringify(result)
+  }).catch(() => {});
+
+  return result;
+}
+
 async function runOneJob() {
   const jobResponse = await bridgeRequest("/api/job");
   const job = jobResponse.job;
@@ -1682,6 +1751,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "DICIDY_BUILD_FLOW_JOB") {
     buildFlowJob()
       .then(result => sendResponse(result))
+      .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_RUN_WEB_JOB") {
+    runWebJob(message.job)
+      .then(result => sendResponse({ ok:true, ...result }))
       .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
     return true;
   }
