@@ -1556,7 +1556,7 @@ async function buildFlowJob() {
   return {
     ok: true,
     status: "FLOW_JOB_READY",
-    prompt: promptResult,
+    prompt: flowResult,
     image: imageResult,
     next: "Operator can now set Flow options and click Generate manually."
   };
@@ -1596,13 +1596,16 @@ ${item.prompt}`;
   // FIRST: actually produce the final prompt in ChatGPT.
   const compiledPrompt = await sendPromptToChat(targets.chat, compilerInstruction);
 
-  // SECOND: use the same proven last-assistant -> Flow mechanism.
-  // This deliberately does not type the compiled text into Flow directly.
-  const promptResult = await moveLastChatToFlow();
-  if (!promptResult?.ok) {
-    throw new Error("Prompt handoff failed: " + JSON.stringify(promptResult));
+  // SECOND: compose the proven manual steps directly.
+  // Do NOT re-read ChatGPT and do NOT call moveLastChatToFlow().
+  // sendPromptToChat() already returned the exact final assistant prompt.
+  // Reuse the same proven prepareFlow() used by the manual Flow handoff.
+  const flowResult = await prepareFlow(targets.flow, compiledPrompt);
+  if (!flowResult?.ready) {
+    throw new Error("Prompt handoff failed: " + JSON.stringify(flowResult));
   }
 
+  // THIRD: reuse the proven PASTE COPIED IMAGE -> FLOW function.
   const imageResult = await pasteClipboardImageToFlow();
   if (!imageResult?.ok) {
     throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
