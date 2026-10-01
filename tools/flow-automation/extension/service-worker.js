@@ -13,7 +13,6 @@ async function evaluate(tabId, expression) {
     awaitPromise: true
   });
 
-  
   if (result && result.exceptionDetails) {
     throw new Error(result.exceptionDetails.text || "Runtime.evaluate failed.");
   }
