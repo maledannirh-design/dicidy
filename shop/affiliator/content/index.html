@@ -53,6 +53,7 @@
 <option>POV persiapan sebelum aktivitas</option>
 <option>Masalah → solusi</option>
 </select>
+<div class="cf-muted" id="creativeRecommendation" style="margin-top:7px"></div>
 <label class="cf-label">Prompt awal / instruksi kreatif</label><textarea class="cf-textarea" id="prompt">Buat konsep afiliasi yang natural dan santai untuk produk ini. Jangan membuat klaim produk atau manfaat yang tidak didukung oleh informasi produk. Fokus pada masalah sehari-hari yang nyata, demonstrasikan produk, jelaskan manfaat yang benar-benar tersedia, lalu akhiri dengan ajakan bertindak yang jelas tetapi natural. Buat arahan video yang runtut dari awal sampai akhir, termasuk visual, ucapan jika mode bicara dipilih, dan teks dinamis jika diaktifkan. Platform dan target audiens yang dipilih di atas adalah parameter utama.</textarea><div class="cf-muted" id="promptAccessNote" style="margin-top:7px"></div><label class="cf-label">Prompt Final</label><textarea class="cf-textarea cf-final-prompt" id="finalPrompt" readonly></textarea><div class="cf-muted" id="finalPromptNote" style="margin-top:7px">Prompt Final adalah prompt yang akan digunakan untuk produksi video. Saat JOB VIDEO dibuat, prompt hasil konfigurasi akan otomatis dimasukkan ke kolom ini.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="cf-btn secondary" id="saveFinalPrompt">SIMPAN PROMPT FINAL</button></div>
 </div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="cf-btn" id="generateStoryboard">BUAT 1 JOB VIDEO</button><button class="cf-btn secondary" id="resetPrompt">RESET PROMPT</button><button class="cf-btn secondary" id="applyPrompt" style="display:none">TERAPKAN PROMPT</button></div><div class="cf-success" id="generationNote" style="display:none"></div></div>
 
@@ -170,6 +171,19 @@ function productCountLabel(n){return n===1?"produk tunggal":n+" produk dalam sat
 function syncProductCountUI(){
   document.querySelectorAll("[data-product-count]").forEach(x=>x.classList.toggle("active",Number(x.dataset.productCount)===selectedProductCount));
   renderProductSlots();
+  const recommendation=document.getElementById("creativeRecommendation");
+  if(recommendation){
+    const rec=selectedProductCount<=1
+      ? "Rekomendasi: Problem → Solution atau Product Demonstration untuk satu produk."
+      : selectedProductCount===2
+        ? "Rekomendasi: Starter kit / paket lengkap atau POV persiapan untuk 2 produk."
+        : selectedProductCount===3
+          ? "Rekomendasi: Barang wajib dimiliki — format listicle 3 item dengan hook yang kuat."
+          : selectedProductCount===4
+            ? "Rekomendasi: Starter kit / paket lengkap — tampilkan 4 item sebagai satu setup."
+            : "Rekomendasi: Checklist sebelum aktivitas + Fast-paced montage — rapid cuts agar 5–6 item tetap terbaca.";
+    recommendation.textContent=rec;
+  }
   const note=document.getElementById("generationNote");
   if(note&&selectedProductCount>1){note.style.display="block";note.textContent=`${selectedProductCount} produk akan diperlakukan sebagai satu tema video, bukan ${selectedProductCount} video terpisah.`;}
 }
