@@ -89,25 +89,32 @@
   window.addEventListener("message", event => {
     if (event.source !== window) return;
     const data = event.data;
-    if (!data || data.source !== "DICIDY_CONTENT_FACTORY" || data.type !== "DICIDY_RUN_VIDEO") return;
+    if (!data || data.source !== "DICIDY_CONTENT_FACTORY") return;
 
-    chrome.runtime.sendMessage({
-      type: "DICIDY_RUN_WEB_JOB",
-      requestId: data.requestId || "",
-      job: data.job
-    }).then(result => {
+    let message = null;
+    if (data.type === "DICIDY_RUN_VIDEO") {
+      message = {type:"DICIDY_RUN_WEB_JOB", requestId:data.requestId||"", job:data.job};
+    } else if (data.type === "DICIDY_PASTE_ONE_IMAGE") {
+      message = {type:"DICIDY_PASTE_ONE_IMAGE", requestId:data.requestId||""};
+    } else if (data.type === "DICIDY_GENERATE_FLOW") {
+      message = {type:"DICIDY_GENERATE_FLOW", requestId:data.requestId||""};
+    } else {
+      return;
+    }
+
+    chrome.runtime.sendMessage(message).then(result => {
       window.postMessage({
-        source: "DICIDY_FLOW_BRIDGE",
-        type: "DICIDY_RUN_VIDEO_RESULT",
-        requestId: data.requestId || "",
+        source:"DICIDY_FLOW_BRIDGE",
+        type:"DICIDY_BRIDGE_RESULT",
+        requestId:data.requestId||"",
         result
-      }, "*");
+      },"*");
     }).catch(error => {
       window.postMessage({
-        source: "DICIDY_FLOW_BRIDGE",
-        type: "DICIDY_RUN_VIDEO_RESULT",
-        requestId: data.requestId || "",
-        result: {ok:false,error:error.message}
-      }, "*");
+        source:"DICIDY_FLOW_BRIDGE",
+        type:"DICIDY_BRIDGE_RESULT",
+        requestId:data.requestId||"",
+        result:{ok:false,error:error.message}
+      },"*");
     });
   });
