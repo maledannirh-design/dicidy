@@ -403,7 +403,7 @@ function renderMarketProducts(){
     html+='<td><div class="cf-market-actions"><button type="button" class="cf-project-action" data-market-select="'+i+'">'+(row._selected?"DIPILIH":"PILIH")+'</button></div></td>';
     visibleCols.forEach(c=>{
       const v=String(row[c]??"");
-      if(isLinkColumn(c)&&/^https?:\\/\\//i.test(v)){
+      if(isLinkColumn(c)&&/^https?:\/\//i.test(v)){
         html+='<td><a class="cf-market-link" href="'+escapeAttr(v)+'" target="_blank" rel="noopener">BUKA LINK ↗</a></td>';
       }else{
         html+='<td><span class="cf-market-value">'+escapeHtml(v)+'</span></td>';
