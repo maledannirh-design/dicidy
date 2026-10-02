@@ -525,7 +525,7 @@ async function prepareFlow(flowTab, compiledPrompt) {
   }
 }
 
-async function pasteClipboardImageToFlow() {
+async function pasteClipboardImageToFlow(expectedBeforeCount = null) {
   const targets = await findTargets();
   if (!targets.flow) throw new Error("Google Flow tab was not found.");
 
@@ -650,9 +650,10 @@ async function pasteClipboardImageToFlow() {
     await new Promise(r => setTimeout(r, 1200));
 
     const verification = await evaluate(flowTab.id, `(() => {
-      const ingredient = document.querySelector(
+      const ingredients = Array.from(document.querySelectorAll(
         'flow-image-ingredient-chip button.chip-container[aria-label="Ingredient"]'
-      );
+      ));
+      const ingredient = ingredients[ingredients.length - 1] || null;
 
       const ingredientComponent = document.querySelector(
         'flow-image-ingredient-chip'
@@ -663,7 +664,8 @@ async function pasteClipboardImageToFlow() {
       );
 
       return {
-        found: Boolean(ingredient),
+        found: Boolean(ingredient) && (expectedBeforeCount == null || ingredients.length > expectedBeforeCount),
+        ingredientCount: ingredients.length,
         ingredientComponentFound: Boolean(ingredientComponent),
         ingredientButtonFound: Boolean(ingredient),
         ariaBusy: ingredient?.getAttribute("aria-busy") || "",
@@ -1579,7 +1581,8 @@ async function runWebJob(job) {
 Return ONLY one production-ready Google Flow video prompt.
 Do not explain your reasoning.
 Preserve all product facts exactly as supplied.
-Make the video vertical 9:16 and suitable for a TikTok affiliate video.
+Make the video vertical 9:16 and reusable across multiple distribution platforms.
+Do not mention, display, imitate, or add any platform name, logo, icon, watermark, app UI, button, badge, or platform-specific visual element.
 Target duration: 10 seconds unless the JOB INPUT explicitly specifies another duration.
 Do not invent product claims, prices, discounts, specifications, or certifications.
 Write the final video prompt entirely in natural Indonesian.
@@ -1599,7 +1602,24 @@ ${item.prompt}`;
     throw new Error("Prompt handoff failed: " + JSON.stringify(flowResult));
   }
 
-  // THIRD: use the proven PASTE COPIED IMAGE -> FLOW action.
+  // For multi-product jobs the Content Factory page owns the clipboard sequence.
+  // It copies each product image to the OS clipboard, then asks this bridge
+  // to paste that single clipboard image into Flow. Only after all products
+  // are attached does the page request Generate.
+  const multiProduct = Array.isArray(job.products) && job.products.length > 1;
+
+  if (multiProduct) {
+    return {
+      status: "FLOW_PROMPT_READY_FOR_MULTI_PRODUCT",
+      source: "CHATGPT_COMPILE_THEN_FLOW_MULTI_PRODUCT",
+      compiledPrompt,
+      prompt: flowResult,
+      productCount: job.products.length,
+      multiProduct: true,
+      timestamp:new Date().toISOString()
+    };
+  }
+
   const imageResult = await pasteClipboardImageToFlow();
   if (!imageResult?.ok) {
     throw new Error("Gambar produk gagal masuk ke Ingredients Flow: " + JSON.stringify(imageResult));
@@ -1609,7 +1629,7 @@ ${item.prompt}`;
 
   const result = {
     status: generation?.status === "VIDEO_GENERATED" ? "VIDEO_GENERATED" : "FLOW_READY",
-    source: "CHATGPT_COMPILE_THEN_LAST_ASSISTANT_TO_FLOW",
+    source: "CHATGPT_COMPILE_THEN_FLOW",
     compiledPrompt,
     prompt: flowResult,
     image: imageResult,
@@ -1646,7 +1666,8 @@ async function runOneJob() {
 Return ONLY one production-ready Google Flow video prompt.
 Do not explain your reasoning.
 Preserve product facts exactly as supplied.
-Make the video vertical 9:16 and suitable for a TikTok affiliate video.
+Make the video vertical 9:16 and reusable across multiple distribution platforms.
+Do not mention, display, imitate, or add any platform name, logo, icon, watermark, app UI, button, badge, or platform-specific visual element.
 Do not invent product claims, prices, discounts, specifications, or certifications.
 
 JOB INPUT:
@@ -1681,6 +1702,13 @@ ${item.prompt}`;
   });
 
   return result;
+}
+
+async function generateFlowOnly() {
+  const targets = await findTargets();
+  if (!targets.flow) throw new Error("Google Flow tab was not found.");
+  const generation = await generateAndDownloadOne(targets.flow, {download:false});
+  return {ok:generation?.status === "VIDEO_GENERATED", generation};
 }
 
 async function trustedDebuggerInput(tabId, type, payload) {
@@ -1746,6 +1774,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     pasteClipboardImageToFlow()
       .then(result => sendResponse({ ok:true, ...result }))
       .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_PASTE_ONE_IMAGE") {
+    pasteClipboardImageToFlow(Number.isFinite(Number(message.expectedBeforeCount)) ? Number(message.expectedBeforeCount) : null)
+      .then(result => sendResponse({ ok:Boolean(result?.ok), ...result }))
+      .catch(error => sendResponse({ ok:false, status:"ERROR", error:error.message }));
+    return true;
+  }
+
+  if (message.type === "DICIDY_GENERATE_FLOW") {
+    generateFlowOnly()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ok:false,status:"ERROR",error:error.message}));
     return true;
   }
 
