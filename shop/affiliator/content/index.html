@@ -118,7 +118,7 @@ function renderProductSlots() {
       <label class="cf-label">Gambar produk</label>
       <input class="cf-input product-image-url" data-index="${i}" placeholder="https://... atau gunakan unggah gambar" value="${String(p.image).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">
       <div class="cf-upload-row">
-        <label class="cf-upload-btn" for="productImageFile${i}">UNGGAH GAMBAR</label>
+        <button type="button" class="cf-upload-btn product-image-trigger" data-index="${i}">UNGGAH GAMBAR</button>
         <input class="cf-upload-input product-image-file" id="productImageFile${i}" data-index="${i}" type="file" accept="image/*">
         <span class="cf-upload-meta product-image-meta" data-index="${i}">${p.imageFileName||"Belum ada gambar lokal."}</span>
       </div>
@@ -128,6 +128,12 @@ function renderProductSlots() {
   }
   productSlots.querySelectorAll(".product-name,.product-description,.product-image-url").forEach(el=>{
     el.addEventListener("input",()=>syncProductStateFromDom(Number(el.dataset.index)));
+  });
+  productSlots.querySelectorAll(".product-image-trigger").forEach(el=>{
+    el.addEventListener("click",()=>{
+      const input=document.getElementById("productImageFile"+el.dataset.index);
+      if(input)input.click();
+    });
   });
   productSlots.querySelectorAll(".product-image-file").forEach(el=>{
     el.addEventListener("change",()=>handleProductFile(Number(el.dataset.index),el.files?.[0]));
@@ -143,14 +149,31 @@ function syncProductStateFromDom(i){
 }
 function handleProductFile(i,file){
   if(!file)return;
+  const status=productSlots.querySelector('.product-image-status[data-index="'+i+'"]');
+  const meta=productSlots.querySelector('.product-image-meta[data-index="'+i+'"]');
+  if(!file.type||!file.type.startsWith("image/")){
+    if(status)status.textContent="ERROR: file yang dipilih bukan gambar.";
+    return;
+  }
   productStates[i]=productStates[i]||createProductState(i);
   productStates[i].imageFileName=file.name;
-  const url=URL.createObjectURL(file);
-  productStates[i].image=url;
-  const meta=productSlots.querySelector(`.product-image-meta[data-index="${i}"]`);
-  if(meta)meta.textContent=file.name+" · image selected";
+  if(meta)meta.textContent=file.name+" · membaca gambar...";
+  if(status)status.textContent="Memproses gambar...";
   const reader=new FileReader();
-  reader.onload=()=>{productStates[i].imageData=String(reader.result||"");const status=productSlots.querySelector(`.product-image-status[data-index="${i}"]`);if(status)status.textContent="Siap dipasang sebagai ingredient.";};
+  reader.onload=()=>{
+    const dataUrl=String(reader.result||"");
+    if(!dataUrl){
+      if(status)status.textContent="ERROR: gambar tidak dapat dibaca.";
+      return;
+    }
+    productStates[i].imageData=dataUrl;
+    productStates[i].image=dataUrl;
+    if(meta)meta.textContent=file.name+" · image selected";
+    if(status)status.textContent="✓ Gambar siap dipakai sebagai ingredient.";
+  };
+  reader.onerror=()=>{
+    if(status)status.textContent="ERROR: gagal membaca file gambar.";
+  };
   reader.readAsDataURL(file);
 }
 function collectProducts(){
