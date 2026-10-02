@@ -95,7 +95,7 @@
     if (data.type === "DICIDY_RUN_VIDEO") {
       message = {type:"DICIDY_RUN_WEB_JOB", requestId:data.requestId||"", job:data.job};
     } else if (data.type === "DICIDY_PASTE_ONE_IMAGE") {
-      message = {type:"DICIDY_PASTE_ONE_IMAGE", requestId:data.requestId||""};
+      message = {type:"DICIDY_PASTE_ONE_IMAGE", requestId:data.requestId||"", expectedBeforeCount:Number(data.expectedBeforeCount||0)};
     } else if (data.type === "DICIDY_GENERATE_FLOW") {
       message = {type:"DICIDY_GENERATE_FLOW", requestId:data.requestId||""};
     } else {
