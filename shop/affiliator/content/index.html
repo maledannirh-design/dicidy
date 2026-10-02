@@ -404,7 +404,7 @@ document.getElementById("runVideoFlow").addEventListener("click",async()=>{
     status.textContent="2/3 Memasang "+products.length+" produk ke Ingredients...";
     for(let i=0;i<products.length;i++){
       await copyProductToClipboard(products[i]);
-      const imageResult=await sendBridgeRequest("DICIDY_PASTE_ONE_IMAGE",{});
+      const imageResult=await sendBridgeRequest("DICIDY_PASTE_ONE_IMAGE",{expectedBeforeCount:i});
       if(!imageResult?.ok)throw new Error("Produk "+(i+1)+" gagal masuk Ingredients: "+(imageResult?.error||"unknown error"));
       status.textContent="2/3 Ingredients: "+(i+1)+"/"+products.length+" produk masuk.";
     }
