@@ -1444,7 +1444,7 @@ async function testChatToFlowHandoff() {
   if (!targets.flow) throw new Error("Google Flow tab was not found.");
 
   const testInput =
-`Create a production-ready 10-second vertical 9:16 TikTok Shop affiliate video.
+`Create a production-ready 10-second vertical 9:16 affiliate video reusable across multiple distribution platforms. Do not include any platform name, logo, icon, watermark, app UI, button, badge, or platform-specific visual element.
 Product: Blender.
 Product description: Blender bagus murah berkualitas.
 Return ONLY the final Google Flow video prompt in natural Indonesian.
