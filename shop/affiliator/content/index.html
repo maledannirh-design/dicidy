@@ -377,10 +377,10 @@ document.getElementById("downloadJob").addEventListener("click",()=>{const paylo
 }
 async function copyProductToClipboard(product){
   const source=product.imageData||product.image;
-  if(!source)throw new Error("Produk ${product.index} belum memiliki gambar.");
+  if(!source)throw new Error("Produk "+product.index+" belum memiliki gambar.");
   if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("Browser tidak mendukung image clipboard.");
   const response=await fetch(source);
-  if(!response.ok)throw new Error("Gagal membaca gambar produk ${product.index}.");
+  if(!response.ok)throw new Error("Gagal membaca gambar produk "+product.index+".");
   const blob=await response.blob();
   const type=blob.type&&blob.type.startsWith("image/")?blob.type:"image/png";
   const clipboardBlob=type==="image/png"?blob:await convertImageBlobToPng(blob);
