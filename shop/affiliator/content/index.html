@@ -22,7 +22,7 @@
 <div class="cf-card" style="margin-top:18px">
 <div class="kicker">01 / PRODUCTS</div>
 <h2>Masukkan produk yang akan muncul dalam 1 video.</h2>
-<p class="cf-muted">Satu video dapat memakai 1–6 produk sebagai bahan visual. Untuk video 3–6 produk, prompt akan otomatis diarahkan menjadi format listicle, checklist, starter kit, atau rapid product montage.</p>
+<p class="cf-muted">Satu video dapat memakai 1–6 produk sebagai bahan visual. Format visual mengikuti kombinasi GAYA KONTEN, ANGLE, jumlah produk, dan talent yang dipilih.</p>
 <label class="cf-label">Jumlah produk dalam 1 video</label>
 <div class="cf-count-grid" id="productCountChoices" style="grid-template-columns:repeat(6,1fr)">
   <button type="button" class="cf-count active" data-product-count="1">1</button>
@@ -525,27 +525,63 @@ function buildPrompt(angle,index){
   const dur=Number(document.getElementById("duration").value);
   const seed=appliedPromptSeed.trim();
   const speech=selectedSpeech==="speaking";
+  const singleActionMode=style==="Single-action / Talent performance";
+  const matchingOutfitMode=angle==="Matching outfit / Samaan outfit";
+  const talentPresent=selectedModel!=="none";
+  const sideNoFaceMode=matchingOutfitMode || angle==="Talent action → dialogue → CTA";
   const textMode=selectedCaptions==="yes"
     ? (speech
-      ? "Gunakan voice-over Bahasa Indonesia yang sangat singkat dan cepat. Hook maksimal satu kalimat; jangan membaca seluruh daftar produk. Nama produk dapat diperkuat dengan teks dinamis."
-      : "Gunakan teks dinamis singkat untuk hook dan nama setiap produk. Tidak ada voice-over.")
+      ? "Gunakan voice-over/dialogue Bahasa Indonesia yang sangat singkat dan cepat. Jangan membaca seluruh daftar produk. Nama produk dapat diperkuat dengan teks dinamis."
+      : "Gunakan teks dinamis singkat untuk hook, konteks, dan CTA. Tidak ada voice-over.")
     : "JANGAN menampilkan caption, subtitle, teks layar, label, atau tulisan dialog apa pun di dalam video.";
 
   const productFacts=products.map((p,i)=>`${i+1}. ${p.name} — ${p.description||"fakta produk belum diisi"}`).join("\n");
   const count=products.length;
-  const pacing=count>=5
-    ? "sangat cepat: hook 1 detik, lalu rapid cuts sekitar 1 detik per produk, kemudian penutup singkat"
-    : count>=3
-      ? "cepat dan terstruktur: hook singkat, tiap produk mendapat momen visual yang jelas, lalu penutup singkat"
-      : "ringkas dengan fokus visual yang jelas pada setiap produk";
+
+  const pacing=singleActionMode||matchingOutfitMode
+    ? "satu aksi utama dengan pacing natural; jangan membuat rapid cuts per produk"
+    : count>=5
+      ? "sangat cepat: hook 1 detik, lalu rapid cuts sekitar 1 detik per produk, kemudian penutup singkat"
+      : count>=3
+        ? "cepat dan terstruktur: hook singkat, tiap produk mendapat momen visual yang jelas, lalu penutup singkat"
+        : "ringkas dengan fokus visual yang jelas pada setiap produk";
+
+  const talentRules=selectedModel==="none"
+    ? `- TALENT WAJIB: tanpa talent. Jangan membuat manusia, wajah manusia, tubuh manusia, tangan manusia, atau karakter manusia.
+- Jangan menambahkan model manusia walaupun produk biasanya digunakan oleh manusia.`
+    : `- TALENT WAJIB: ${model}. Jika berupa @kode talent, pertahankan talent tersebut secara konsisten sepanjang video. Jika berupa female/male, gunakan gender tersebut secara konsisten.
+- Usia talent: ${age}.
+- Jangan mengganti gender atau identitas talent yang dipilih.`;
+
+  const angleRules=sideNoFaceMode && talentPresent
+    ? `- ANGLE WAJIB: ${angle}.
+- Gunakan side angle / sudut samping sebagai sudut kamera utama.
+- Wajah talent TIDAK menjadi fokus dan tidak perlu terlihat jelas. Hindari frontal shot, close-up wajah, atau angle yang memperlihatkan wajah secara dominan.
+- Prioritaskan tubuh, gerakan, outfit, dan produk dari samping.`
+    : `- ANGLE WAJIB: ${angle}.
+- Ikuti angle tersebut secara konsisten. Jangan mengubahnya menjadi frontal close-up tanpa alasan kreatif yang diberikan.`;
+
+  const singleActionRules=(singleActionMode||matchingOutfitMode)
+    ? `- Gunakan SATU AKSI UTAMA untuk keseluruhan video, bukan beberapa adegan iklan yang terpisah.
+- Untuk 3–6 produk, satukan seluruh produk sebagai satu kesatuan visual yang koheren. Produk tidak perlu mendapat satu scene terpisah masing-masing.
+- JANGAN menggunakan format listicle, checklist per produk, rapid cuts 1 detik per produk, atau urutan produk 1 → ${count} sebagai mini-iklan terpisah.
+- Jika talent digunakan, pertahankan talent dalam aksi utama secara konsisten.
+- Jika angle adalah Matching outfit / Samaan outfit, tampilkan seluruh produk sebagai bagian dari outfit/set yang sedang digunakan talent dan tetap dapat dikenali.
+- Jika angle adalah Talent action → dialogue → CTA, susun alur: aksi talent → dialogue singkat → CTA, dengan satu aksi utama.`
+    : `- Untuk 3–6 produk, buat satu video roundup/listicle yang memiliki tema tunggal, bukan beberapa iklan terpisah.
+- Setiap produk harus mendapat momen visual yang dapat dikenali. Jangan biarkan satu produk tertutup oleh produk lain sepanjang video.
+- Untuk format listicle, gunakan urutan produk 1 → ${count} secara jelas melalui framing, gerakan kamera, atau teks singkat.`;
 
   return `Buat prompt video afiliasi universal yang siap diproduksi dalam format vertikal 9:16. Video harus NETRAL dan dapat dipakai ulang di berbagai platform. JANGAN menyebut, menampilkan, meniru, atau memasukkan logo, ikon, watermark, nama aplikasi, antarmuka aplikasi, tombol, atau elemen branding platform distribusi apa pun.
 
 TEMA VIDEO: ${angle}.
 JUMLAH PRODUK: ${count}.
 TARGET AUDIENS: ${aud}.
-MODEL: ${model}, usia ${age}.
+TALENT TERPILIH: ${model}.
+MODEL/GENDER: ${selectedModel==="none"?"TANPA TALENT":selectedModel.toUpperCase()}.
+USIA: ${selectedModel==="none"?"TIDAK BERLAKU":age}.
 GAYA: ${style}.
+ANGLE: ${angle}.
 TARGET DURASI: ${dur} detik.
 MODE BICARA: ${speech?"BERBICARA DALAM BAHASA INDONESIA, SANGAT RINGKAS":"TANPA BICARA"}.
 TEKS DINAMIS: ${selectedCaptions==="yes"?"AKTIF":"NONAKTIF"}.
@@ -553,16 +589,18 @@ TEKS DINAMIS: ${selectedCaptions==="yes"?"AKTIF":"NONAKTIF"}.
 DAFTAR PRODUK YANG WAJIB MUNCUL:
 ${productFacts}
 
+ATURAN TALENT & KAMERA:
+${talentRules}
+${angleRules}
+
 ATURAN KREATIF:
 - Perlakukan semua gambar produk yang diberikan sebagai bahan visual nyata dan gunakan setiap produk yang tersedia.
 - Jangan menggabungkan produk menjadi produk baru atau mengubah bentuk, warna, merek, detail, atau kemasan produk secara acak.
-- Untuk 3–6 produk, buat satu video roundup/listicle yang memiliki tema tunggal, bukan beberapa iklan terpisah.
+${singleActionRules}
 - Hook harus menyebut kebutuhan atau situasi pengguna, bukan nama platform.
-- Setiap produk harus mendapat momen visual yang dapat dikenali. Jangan biarkan satu produk tertutup oleh produk lain sepanjang video.
 - Pacing: ${pacing}.
-- Untuk format listicle, gunakan urutan produk 1 → ${count} secara jelas melalui framing, gerakan kamera, atau teks singkat.
 - Hindari klaim manfaat, harga, diskon, spesifikasi, sertifikasi, atau hasil yang tidak diberikan pada data produk.
-- Gunakan gerakan manusia realistis, interaksi produk natural, pencahayaan konsisten, dan transisi cepat tetapi masuk akal.
+- Gunakan gerakan manusia realistis jika talent digunakan, interaksi produk natural, pencahayaan konsisten, dan transisi yang sesuai dengan angle.
 - Penutup berupa CTA netral seperti ajakan melihat detail produk, tanpa menyebut platform tertentu.
 - ${textMode}
 
@@ -575,7 +613,7 @@ function makeScenes(){
   const ordered=[preferred,...baseAngles.filter(a=>a!==preferred)];
   const angles=ordered.slice(0,selectedVideoCount);
   currentJobs=angles.map((angle,i)=>({jobId:"job-"+String(i+1).padStart(2,"0"),angle,prompt:buildPrompt(angle,i+1),status:"READY"}));
-  scenes.innerHTML='<div class="cf-success"><strong>'+currentJobs.length+' VIDEO JOB'+(currentJobs.length===1?"":"S")+' READY.</strong><div class="cf-muted" style="margin-top:6px">Prompt produksi memakai '+selectedProductCount+' produk sebagai satu video roundup. '+(isDiamond?"Prompt yang diterapkan digunakan dalam pekerjaan ini.":"Prompt Content Factory yang tersedia digunakan dalam pekerjaan ini.")+'</div></div>';
+  scenes.innerHTML='<div class="cf-success"><strong>'+currentJobs.length+' VIDEO JOB'+(currentJobs.length===1?"":"S")+' READY.</strong><div class="cf-muted" style="margin-top:6px">Prompt produksi memakai '+selectedProductCount+' produk dengan format sesuai gaya, angle, dan talent yang dipilih. '+(isDiamond?"Prompt yang diterapkan digunakan dalam pekerjaan ini.":"Prompt Content Factory yang tersedia digunakan dalam pekerjaan ini.")+'</div></div>';
   document.getElementById("queueActions").style.display="block";
   document.getElementById("queueStatus").textContent=currentJobs.length+" VIDEO JOB"+(currentJobs.length===1?"":"S")+" READY · ANTREAN BELUM DIMULAI";
   document.getElementById("queueProgress").style.width="0%";
@@ -603,7 +641,7 @@ function buildJobPayload(){
       captions:{required:selectedCaptions==="yes",style:selectedCaptions==="yes"?"dynamic-emphasis":"none"},
       videoCount:selectedVideoCount,
       productCount:selectedProductCount,
-      angleMode:"multi-product roundup"
+      angleMode:document.getElementById("angle").value,talent:selectedTalent,model:selectedModel
     },
     jobs:currentJobs.map(j=>({...j,prompt:j.prompt,status:"READY"}))
   };
