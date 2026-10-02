@@ -43,6 +43,8 @@
 <option>POV / Relatable preparation</option>
 <option>Clean product showcase</option>
 <option>Funny / Relatable</option>
+<option>Single-action / Talent performance</option>
+<option>Lifestyle / Sports action</option>
 </select>
 <label class="cf-label">Target durasi video</label><select class="cf-select" id="duration"><option value="10" selected>10 detik</option><option value="4">4 detik</option><option value="6">6 detik</option><option value="8">8 detik</option></select><div class="cf-muted" style="margin-top:7px">Target ini dikirim ke mesin prompt. Batas durasi aktual tetap mengikuti model Google Flow yang dipilih.</div>
 </div><div>
@@ -52,6 +54,8 @@
 <option>Starter kit / paket lengkap</option>
 <option>POV persiapan sebelum aktivitas</option>
 <option>Masalah → solusi</option>
+<option>Matching outfit / Samaan outfit</option>
+<option>Talent action → dialogue → CTA</option>
 </select>
 <div class="cf-muted" id="creativeRecommendation" style="margin-top:7px"></div>
 <label class="cf-label">Prompt awal / instruksi kreatif</label><textarea class="cf-textarea" id="prompt">Buat konsep video afiliasi yang natural dan santai untuk produk atau kumpulan produk ini. Jangan membuat klaim produk atau manfaat yang tidak didukung oleh informasi produk. Fokus pada kebutuhan nyata audiens, tampilkan produk secara jelas, jelaskan hanya fakta yang tersedia, lalu akhiri dengan ajakan bertindak yang natural. Jika ada beberapa produk, satukan semuanya dalam satu tema video dan pastikan setiap produk mendapat momen visual yang jelas. Buat arahan video yang runtut dari awal sampai akhir, termasuk visual, ucapan jika mode bicara dipilih, dan teks dinamis jika diaktifkan. Jangan menyebut atau menampilkan nama, logo, watermark, ikon, UI, atau branding platform distribusi apa pun.</textarea><div class="cf-muted" id="promptAccessNote" style="margin-top:7px"></div><label class="cf-label">Prompt Final</label><textarea class="cf-textarea cf-final-prompt" id="finalPrompt" readonly></textarea><div class="cf-muted" id="finalPromptNote" style="margin-top:7px">Prompt Final adalah prompt yang akan digunakan untuk produksi video. Saat JOB VIDEO dibuat, prompt hasil konfigurasi akan otomatis dimasukkan ke kolom ini.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="cf-btn secondary" id="saveFinalPrompt">SIMPAN PROMPT FINAL</button></div>
@@ -275,7 +279,7 @@ function syncProductCountUI(){
           ? "Rekomendasi: Barang wajib dimiliki — format listicle 3 item dengan hook yang kuat."
           : selectedProductCount===4
             ? "Rekomendasi: Starter kit / paket lengkap — tampilkan 4 item sebagai satu setup."
-            : "Rekomendasi: Checklist sebelum aktivitas + Fast-paced montage — rapid cuts agar 5–6 item tetap terbaca.";
+            : "Rekomendasi: Single-action / Talent performance + Matching outfit / Samaan outfit — 5–6 produk menjadi satu kesatuan visual, bukan 5–6 adegan terpisah.";
     recommendation.textContent=rec;
   }
   const note=document.getElementById("generationNote");
