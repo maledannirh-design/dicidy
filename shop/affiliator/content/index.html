@@ -19,28 +19,44 @@
 <div class="cf-nav"><button class="cf-tab active" data-tab="create">BUAT KONTEN</button><button class="cf-tab" data-tab="projects">KONTEN SAYA</button><button class="cf-tab" data-tab="connections">KONEKSI AI</button></div>
 
 <section class="cf-panel active" id="tab-create">
-<div class="cf-grid">
-<div class="cf-card"><div class="kicker">01 / PRODUCT</div><h2>Pilih produk.</h2><p class="cf-muted">Produk dari Product Radar nantinya akan masuk bersama gambar, harga, komisi, dan tautan afiliasi. Untuk sekarang gunakan produk manual.</p>
-<label class="cf-label">Nama produk</label><input class="cf-input" id="productName" value="Blender">
-<label class="cf-label">Gambar produk</label><input class="cf-input" id="productImage" placeholder="https://..."><div class="cf-upload-row"><label class="cf-upload-btn" for="productImageFile">UNGGAH GAMBAR</label><button type="button" class="cf-upload-btn" id="copyProductImage" disabled>SALIN GAMBAR</button><input class="cf-upload-input" type="file" id="productImageFile" accept="image/*"><span class="cf-upload-meta" id="productImageMeta">Select an image, then SALIN GAMBAR to place the actual image in the system clipboard for Google Flow.</span></div>
-<label class="cf-label">Harga</label><input class="cf-input" id="productHarga" value="Rp129.000">
-<label class="cf-label">Komisi</label><input class="cf-input" id="productKomisi" value="5.6%">
-<label class="cf-label">Deskripsi produk</label><textarea class="cf-textarea" id="productDescription">Blender bagus murah berkualitas</textarea>
-<label class="cf-label">Tautan produk</label><input class="cf-input" id="productLink" placeholder="Affiliate/product URL"></div>
-
-<div class="cf-card"><div class="kicker">PRATINJAU PRODUK</div><div class="cf-product" style="margin-top:16px"><div class="cf-product-img" id="productPreview"><span style="display:grid;place-items:center;height:100%;font-size:11px;color:#666">IMAGE</span></div><div><h3 id="previewName">Blender</h3><div class="cf-muted" id="previewHarga">Rp129.000</div><div class="cf-pill" id="previewKomisi">5,6% komisi</div></div></div><div class="cf-warning">Sumber produk API sengaja dipisahkan dari alur ini. Setelah akses TikTok/Shopee tersedia, Product Radar dapat mengirim data produk asli secara otomatis.</div></div>
+<div class="cf-card" style="margin-top:18px">
+<div class="kicker">01 / PRODUCTS</div>
+<h2>Masukkan produk yang akan muncul dalam 1 video.</h2>
+<p class="cf-muted">Satu video dapat memakai 1–6 produk sebagai bahan visual. Untuk video 3–6 produk, prompt akan otomatis diarahkan menjadi format listicle, checklist, starter kit, atau rapid product montage.</p>
+<label class="cf-label">Jumlah produk dalam 1 video</label>
+<div class="cf-count-grid" id="productCountChoices" style="grid-template-columns:repeat(6,1fr)">
+  <button type="button" class="cf-count active" data-product-count="1">1</button>
+  <button type="button" class="cf-count" data-product-count="2">2</button>
+  <button type="button" class="cf-count" data-product-count="3">3</button>
+  <button type="button" class="cf-count" data-product-count="4">4</button>
+  <button type="button" class="cf-count" data-product-count="5">5</button>
+  <button type="button" class="cf-count" data-product-count="6">6</button>
+</div>
+<div id="productSlots" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px"></div>
 </div>
 
 <div class="cf-card" style="margin-top:18px"><div class="kicker">02 / BRIEF KREATIF</div><div class="cf-grid"><div>
-<label class="cf-label">Platform</label><div class="cf-platform-grid" id="platformChoices"><button type="button" class="cf-platform active" data-platform="tiktok"><strong>TikTok Shop</strong><div class="cf-muted">Video afiliasi TikTok</div></button><button type="button" class="cf-platform" data-platform="shopee"><strong>Shopee</strong><div class="cf-muted">Video afiliasi Shopee</div></button></div><label class="cf-label">Target audiens</label><input class="cf-input" id="audience" value="Young woman"><label class="cf-label">Jumlah video</label><div class="cf-count-grid" id="videoCountChoices"><button type="button" class="cf-count active" data-count="1">1</button><button type="button" class="cf-count" data-count="2">2</button><button type="button" class="cf-count" data-count="3">3</button><button type="button" class="cf-count" data-count="4">4</button><button type="button" class="cf-count" data-count="5">5</button></div><div class="cf-muted" style="margin-top:7px">Setiap video adalah satu pekerjaan kreatif. Satu video dapat berisi beberapa klip 4–8 detik.</div><label class="cf-label">Model</label><div class="cf-choice-grid" id="modelChoices"><button type="button" class="cf-choice active" data-model="female">Female</button><button type="button" class="cf-choice" data-model="male">Male</button><button type="button" class="cf-choice" data-model="none">Tanpa model</button></div><label class="cf-label">Age</label><div class="cf-choice-grid" id="ageChoices"><button type="button" class="cf-choice active" data-age="20-30">20–30</button><button type="button" class="cf-choice" data-age="30-50">30–50</button><button type="button" class="cf-choice" data-age="50+">50+</button></div>
-<div class="cf-setting-box"><div class="cf-label" style="margin-top:0">Suara / Bicara</div><div class="cf-setting-row" id="speechChoices"><button type="button" class="cf-setting-choice active" data-speech="speaking">Berbicara · Bahasa Indonesia</button><button type="button" class="cf-setting-choice" data-speech="silent">Tanpa bicara</button></div><div class="cf-label">Gunakan teks dinamis?</div><div class="cf-setting-row" id="captionChoices"><button type="button" class="cf-setting-choice active" data-captions="yes">Ya, gunakan teks dinamis</button><button type="button" class="cf-setting-choice" data-captions="no">Tidak, tanpa teks dinamis</button></div><div class="cf-muted" style="margin-top:8px">Pilih apakah Flow perlu membuat teks dinamis di dalam video.</div></div><label class="cf-label">Gaya konten</label><select class="cf-select" id="style"><option>Natural / Casual</option><option>Funny / Relatable</option><option>Problem → Solution</option><option>Review / Honest</option><option>Fast selling / Direct</option></select>
-<label class="cf-label">Target durasi video</label><select class="cf-select" id="duration"><option value="10" selected>10 detik</option><option value="4">4 detik</option><option value="6">6 detik</option><option value="8">8 detik</option></select><div class="cf-muted" style="margin-top:7px">Target ini dikirim ke mesin prompt. Google Flow dapat menerapkan durasi klip sesuai model yang dipilih.</div>
+<div class="cf-setting-box" style="margin-top:0"><div class="cf-label" style="margin-top:0">Format distribusi</div><div class="cf-required">1 VIDEO · 9:16 · NETRAL UNTUK BERBAGAI PLATFORM</div><div class="cf-muted" style="margin-top:8px">Tidak ada nama platform, logo platform, watermark, atau tampilan aplikasi tertentu di dalam prompt maupun video.</div></div><label class="cf-label">Target audiens</label><input class="cf-input" id="audience" value="Anak kos / pengguna muda"><label class="cf-label">Jumlah video</label><div class="cf-count-grid" id="videoCountChoices"><button type="button" class="cf-count active" data-count="1">1</button><button type="button" class="cf-count" data-count="2">2</button><button type="button" class="cf-count" data-count="3">3</button><button type="button" class="cf-count" data-count="4">4</button><button type="button" class="cf-count" data-count="5">5</button></div><div class="cf-muted" style="margin-top:7px">Setiap video adalah satu pekerjaan kreatif. Satu video dapat berisi beberapa klip 4–8 detik.</div><label class="cf-label">Model</label><div class="cf-choice-grid" id="modelChoices"><button type="button" class="cf-choice active" data-model="female">Female</button><button type="button" class="cf-choice" data-model="male">Male</button><button type="button" class="cf-choice" data-model="none">Tanpa model</button></div><label class="cf-label">Age</label><div class="cf-choice-grid" id="ageChoices"><button type="button" class="cf-choice active" data-age="20-30">20–30</button><button type="button" class="cf-choice" data-age="30-50">30–50</button><button type="button" class="cf-choice" data-age="50+">50+</button></div>
+<div class="cf-setting-box"><div class="cf-label" style="margin-top:0">Suara / Bicara</div><div class="cf-setting-row" id="speechChoices"><button type="button" class="cf-setting-choice active" data-speech="speaking">Berbicara · Bahasa Indonesia</button><button type="button" class="cf-setting-choice" data-speech="silent">Tanpa bicara</button></div><div class="cf-label">Gunakan teks dinamis?</div><div class="cf-setting-row" id="captionChoices"><button type="button" class="cf-setting-choice active" data-captions="yes">Ya, gunakan teks dinamis</button><button type="button" class="cf-setting-choice" data-captions="no">Tidak, tanpa teks dinamis</button></div><div class="cf-muted" style="margin-top:8px">Pilih apakah Flow perlu membuat teks dinamis di dalam video.</div></div><label class="cf-label">Gaya konten</label><select class="cf-select" id="style">
+<option>Fast-paced montage / Rapid cuts</option>
+<option>Checklist editorial</option>
+<option>POV / Relatable preparation</option>
+<option>Clean product showcase</option>
+<option>Funny / Relatable</option>
+</select>
+<label class="cf-label">Target durasi video</label><select class="cf-select" id="duration"><option value="10" selected>10 detik</option><option value="4">4 detik</option><option value="6">6 detik</option><option value="8">8 detik</option></select><div class="cf-muted" style="margin-top:7px">Target ini dikirim ke mesin prompt. Batas durasi aktual tetap mengikuti model Google Flow yang dipilih.</div>
 </div><div>
-<label class="cf-label">Angle konten</label><select class="cf-select" id="angle"><option>Problem → Solution</option><option>3 reasons to buy</option><option>Before / After</option><option>POV / Relatable</option><option>Product demonstration</option></select>
+<label class="cf-label">Angle konten</label><select class="cf-select" id="angle">
+<option>Barang wajib dimiliki</option>
+<option>Checklist sebelum aktivitas</option>
+<option>Starter kit / paket lengkap</option>
+<option>POV persiapan sebelum aktivitas</option>
+<option>Masalah → solusi</option>
+</select>
 <label class="cf-label">Prompt awal / instruksi kreatif</label><textarea class="cf-textarea" id="prompt">Buat konsep afiliasi yang natural dan santai untuk produk ini. Jangan membuat klaim produk atau manfaat yang tidak didukung oleh informasi produk. Fokus pada masalah sehari-hari yang nyata, demonstrasikan produk, jelaskan manfaat yang benar-benar tersedia, lalu akhiri dengan ajakan bertindak yang jelas tetapi natural. Buat arahan video yang runtut dari awal sampai akhir, termasuk visual, ucapan jika mode bicara dipilih, dan teks dinamis jika diaktifkan. Platform dan target audiens yang dipilih di atas adalah parameter utama.</textarea><div class="cf-muted" id="promptAccessNote" style="margin-top:7px"></div><label class="cf-label">Prompt Final</label><textarea class="cf-textarea cf-final-prompt" id="finalPrompt" readonly></textarea><div class="cf-muted" id="finalPromptNote" style="margin-top:7px">Prompt Final adalah prompt yang akan digunakan untuk produksi video. Saat JOB VIDEO dibuat, prompt hasil konfigurasi akan otomatis dimasukkan ke kolom ini.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="cf-btn secondary" id="saveFinalPrompt">SIMPAN PROMPT FINAL</button></div>
 </div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="cf-btn" id="generateStoryboard">BUAT 1 JOB VIDEO</button><button class="cf-btn secondary" id="resetPrompt">RESET PROMPT</button><button class="cf-btn secondary" id="applyPrompt" style="display:none">TERAPKAN PROMPT</button></div><div class="cf-success" id="generationNote" style="display:none"></div></div>
 
-<div class="cf-card" style="margin-top:18px"><div class="kicker">03 / AI → FLOW JOB QUEUE</div><h2>Antrean prompt & produksi.</h2><p class="cf-muted">Web app menyiapkan pekerjaan video berdasarkan platform, audiens, dan Prompt Final yang dipilih. Dalam mode produksi, Playwright akan membuka sesi ChatGPT dan Google Flow yang sudah login di browser anggota lalu memproses pekerjaan secara lokal. Alur browser ini tidak memerlukan API key.</p><div class="cf-scenes" id="scenes"><div class="cf-empty">Build job videos begin.</div></div><div id="queueActions" style="display:none;margin-top:14px"><div class="cf-progress"><span id="queueProgress"></span></div><div class="cf-muted" id="queueStatus" style="margin-top:7px">READY</div><div class="cf-muted" id="runVideoStatus" style="margin-top:7px">Jalankan Video → Flow: ChatGPT membuat prompt, gambar masuk ke Ingredients, lalu Generate otomatis. Video tidak diunduh otomatis.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="cf-btn" id="downloadJob">DOWNLOAD JOB</button><button class="cf-btn" id="runVideoFlow" style="background:#e5a9a9;color:#2e5d3a">▶ JALANKAN VIDEO → FLOW</button></div></div></div>
+<div class="cf-card" style="margin-top:18px"><div class="kicker">03 / AI → FLOW JOB QUEUE</div><h2>Antrean prompt & produksi.</h2><p class="cf-muted">Web app menyiapkan pekerjaan video berdasarkan jumlah produk, audiens, gaya, angle, dan Prompt Final yang dipilih. Dalam mode produksi, Playwright akan membuka sesi ChatGPT dan Google Flow yang sudah login di browser anggota lalu memproses pekerjaan secara lokal. Alur browser ini tidak memerlukan API key.</p><div class="cf-scenes" id="scenes"><div class="cf-empty">Build job videos begin.</div></div><div id="queueActions" style="display:none;margin-top:14px"><div class="cf-progress"><span id="queueProgress"></span></div><div class="cf-muted" id="queueStatus" style="margin-top:7px">READY</div><div class="cf-muted" id="runVideoStatus" style="margin-top:7px">Jalankan Video → Flow: ChatGPT membuat prompt, gambar masuk ke Ingredients, lalu Generate otomatis. Video tidak diunduh otomatis.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="cf-btn" id="downloadJob">DOWNLOAD JOB</button><button class="cf-btn" id="runVideoFlow" style="background:#e5a9a9;color:#2e5d3a">▶ JALANKAN VIDEO → FLOW</button></div></div></div>
 
 <div class="cf-card" style="margin-top:18px"><div class="kicker">04 / AUTOMATION ENGINE</div><h2>Buat video dari storyboard yang disetujui.</h2><div class="cf-grid"><div><label class="cf-label">Penyedia video</label><select class="cf-select" id="videoProvider"><option>Google Flow / Veo melalui Otomasi Browser</option><option>Google Veo API (mendatang)</option></select><div class="cf-warning">Mode Otomasi Browser menggunakan sesi Google Flow anggota yang sudah ada dan credit Flow milik anggota. DICIDY tidak menerima atau menyimpan kata sandi Google atau credit Flow anggota.</div></div><div><label class="cf-label">Rencana produksi</label><div class="cf-pill">9:16 vertical</div><div class="cf-pill">Video mode</div><div class="cf-pill" id="planCaptionPill">Teks dinamis: Ya</div><div class="cf-pill" id="planCountPill">1-video queue</div><div class="cf-pill">ChatGPT → Flow</div><p class="cf-muted">Worker Playwright lokal akan memproses setiap job sesuai urutan dan melaporkan progres ke panel kontrol DICIDY.</div></div><button class="cf-btn" id="saveProject" style="margin-top:14px">SIMPAN PROYEK KONTEN</button></div>
 </section>
@@ -65,24 +81,106 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase
 
 const tabs=[...document.querySelectorAll(".cf-tab")],panels=[...document.querySelectorAll(".cf-panel")];
 tabs.forEach(tab=>tab.addEventListener("click",()=>{tabs.forEach(t=>t.classList.toggle("active",t===tab));panels.forEach(p=>p.classList.toggle("active",p.id==="tab-"+tab.dataset.tab));if(tab.dataset.tab==="projects")renderProjects();}));
-let selectedModel="female",selectedAge="20-30",selectedSpeech="speaking",selectedCaptions="yes",selectedVideoCount=1,selectedPlatform="tiktok",isDiamond=false,currentJobs=[],selectedImageDataUrl="",selectedImageFileName="",appliedPromptSeed=""; const productName=document.getElementById("productName"),productImage=document.getElementById("productImage"),productHarga=document.getElementById("productHarga"),productKomisi=document.getElementById("productKomisi"),productDescription=document.getElementById("productDescription"),productLink=document.getElementById("productLink"),previewName=document.getElementById("previewName"),previewHarga=document.getElementById("previewHarga"),previewKomisi=document.getElementById("previewKomisi"),previewImage=document.getElementById("productPreview"),scenes=document.getElementById("scenes"),promptEl=document.getElementById("prompt"),originalPrompt=promptEl.value,projectsKey="dicidyContentProjects",finalPromptEl=document.getElementById("finalPrompt"); appliedPromptSeed=originalPrompt; finalPromptEl.value=originalPrompt;
-function syncPreview(){previewName.textContent=productName.value||"Untitled product";previewHarga.textContent=productHarga.value||"—";previewKomisi.textContent=(productKomisi.value||"—")+" commission";const url=productImage.value.trim();previewImage.innerHTML=url?"":'<span style="display:grid;place-items:center;height:100%;font-size:11px;color:#666">IMAGE</span>';if(url){const img=document.createElement("img");img.src=url;img.alt="Product";img.style.width="100%";img.style.height="100%";img.style.objectFit="cover";img.onerror=()=>{previewImage.innerHTML='<span style="display:grid;place-items:center;height:100%;font-size:11px;color:#666">IMAGE</span>';};previewImage.appendChild(img);}}
-[productName,productImage,productHarga,productKomisi].forEach(el=>el.addEventListener("input",syncPreview));document.getElementById("productImageFile").addEventListener("change",()=>{const file=document.getElementById("productImageFile").files?.[0];if(!file)return;const url=URL.createObjectURL(file);productImage.value=url;selectedImageFileName=file.name;const reader=new FileReader();reader.onload=()=>{selectedImageDataUrl=String(reader.result||"");document.getElementById("productImageMeta").textContent=file.name+" · image selected · ready to SALIN GAMBAR";document.getElementById("copyProductImage").disabled=!selectedImageDataUrl;};reader.readAsDataURL(file);syncPreview();});
-async function copyImageToClipboard(){
-  const source=selectedImageDataUrl||productImage.value.trim();
-  if(!source)throw new Error("No product image is selected.");
-  if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("This browser does not support image clipboard writing.");
-  const response=await fetch(source);
-  if(!response.ok)throw new Error("Could not read the selected product image.");
-  const blob=await response.blob();
-  const type=blob.type&&blob.type.startsWith("image/")?blob.type:"image/png";
-  const clipboardBlob=type==="image/png"?blob:await convertImageBlobToPng(blob);
-  await navigator.clipboard.write([new ClipboardItem({"image/png":clipboardBlob})]);
+let selectedModel="female",selectedAge="20-30",selectedSpeech="speaking",selectedCaptions="yes",selectedVideoCount=1,selectedProductCount=1,isDiamond=false,currentJobs=[],productStates=[],appliedPromptSeed="";
+const productSlots=document.getElementById("productSlots"),scenes=document.getElementById("scenes"),promptEl=document.getElementById("prompt"),originalPrompt=promptEl.value,projectsKey="dicidyContentProjects",finalPromptEl=document.getElementById("finalPrompt");
+appliedPromptSeed=originalPrompt; finalPromptEl.value=originalPrompt;
+
+function createProductState(i,data={}) {
+  return {
+    name:data.name||"",
+    description:data.description||"",
+    image:data.image||"",
+    imageData:data.imageData||"",
+    imageFileName:data.imageFileName||"",
+    price:data.price||"",
+    commission:data.commission||"",
+    link:data.link||""
+  };
 }
-function convertImageBlobToPng(blob){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const canvas=document.createElement("canvas");canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);canvas.toBlob(png=>{URL.revokeObjectURL(url);if(png)resolve(png);else reject(new Error("Could not convert image to PNG."));},"image/png");};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("Could not decode image."));};img.src=url;});}
-document.getElementById("copyProductImage").addEventListener("click",async()=>{const btn=document.getElementById("copyProductImage"),meta=document.getElementById("productImageMeta");btn.disabled=true;try{await copyImageToClipboard();meta.textContent=(selectedImageFileName||"Gambar produk")+" · COPIED TO CLIPBOARD · ready to paste into Google Flow";}catch(e){console.error(e);meta.textContent="Copy failed: "+(e?.message||"browser clipboard error");}finally{btn.disabled=!selectedImageDataUrl;}});
-syncPreview();
-document.getElementById("resetPrompt").addEventListener("click",()=>{
+productStates=Array.from({length:6},(_,i)=>createProductState(i));
+
+function renderProductSlots() {
+  productSlots.innerHTML="";
+  for(let i=0;i<selectedProductCount;i++){
+    const p=productStates[i]||createProductState(i);
+    const card=document.createElement("div");
+    card.style.cssText="border:1px solid #2d2d2d;background:#101010;padding:14px";
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <strong>PRODUK ${i+1}</strong>
+        <span class="cf-muted">Bahan ${i+1}</span>
+      </div>
+      <label class="cf-label">Nama produk</label>
+      <input class="cf-input product-name" data-index="${i}" value="${String(p.name).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">
+      <label class="cf-label">Deskripsi / fakta produk</label>
+      <textarea class="cf-textarea product-description" data-index="${i}" style="min-height:80px" placeholder="Masukkan fakta yang boleh disebut dalam video.">${String(p.description).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</textarea>
+      <label class="cf-label">Gambar produk</label>
+      <input class="cf-input product-image-url" data-index="${i}" placeholder="https://... atau gunakan unggah gambar" value="${String(p.image).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">
+      <div class="cf-upload-row">
+        <label class="cf-upload-btn" for="productImageFile${i}">UNGGAH GAMBAR</label>
+        <input class="cf-upload-input product-image-file" id="productImageFile${i}" data-index="${i}" type="file" accept="image/*">
+        <span class="cf-upload-meta product-image-meta" data-index="${i}">${p.imageFileName||"Belum ada gambar lokal."}</span>
+      </div>
+      <div class="cf-muted product-image-status" data-index="${i}" style="margin-top:6px"></div>
+    `;
+    productSlots.appendChild(card);
+  }
+  productSlots.querySelectorAll(".product-name,.product-description,.product-image-url").forEach(el=>{
+    el.addEventListener("input",()=>syncProductStateFromDom(Number(el.dataset.index)));
+  });
+  productSlots.querySelectorAll(".product-image-file").forEach(el=>{
+    el.addEventListener("change",()=>handleProductFile(Number(el.dataset.index),el.files?.[0]));
+  });
+}
+function syncProductStateFromDom(i){
+  const card=productSlots.querySelector(`[data-index="${i}"].product-name`)?.closest("div[style]");
+  if(!card)return;
+  productStates[i]=productStates[i]||createProductState(i);
+  productStates[i].name=card.querySelector(".product-name")?.value.trim()||"";
+  productStates[i].description=card.querySelector(".product-description")?.value.trim()||"";
+  productStates[i].image=card.querySelector(".product-image-url")?.value.trim()||productStates[i].image||"";
+}
+function handleProductFile(i,file){
+  if(!file)return;
+  productStates[i]=productStates[i]||createProductState(i);
+  productStates[i].imageFileName=file.name;
+  const url=URL.createObjectURL(file);
+  productStates[i].image=url;
+  const meta=productSlots.querySelector(`.product-image-meta[data-index="${i}"]`);
+  if(meta)meta.textContent=file.name+" · image selected";
+  const reader=new FileReader();
+  reader.onload=()=>{productStates[i].imageData=String(reader.result||"");const status=productSlots.querySelector(`.product-image-status[data-index="${i}"]`);if(status)status.textContent="Siap dipasang sebagai ingredient.";};
+  reader.readAsDataURL(file);
+}
+function collectProducts(){
+  for(let i=0;i<selectedProductCount;i++)syncProductStateFromDom(i);
+  return productStates.slice(0,selectedProductCount).map((p,i)=>({
+    index:i+1,
+    name:p.name.trim()||`Produk ${i+1}`,
+    description:p.description.trim(),
+    image:p.image||"",
+    imageData:p.imageData||"",
+    imageFileName:p.imageFileName||"",
+    price:p.price||"",
+    commission:p.commission||"",
+    link:p.link||""
+  }));
+}
+function productCountLabel(n){return n===1?"produk tunggal":n+" produk dalam satu video";}
+function syncProductCountUI(){
+  document.querySelectorAll("[data-product-count]").forEach(x=>x.classList.toggle("active",Number(x.dataset.productCount)===selectedProductCount));
+  renderProductSlots();
+  const note=document.getElementById("generationNote");
+  if(note&&selectedProductCount>1){note.style.display="block";note.textContent=`${selectedProductCount} produk akan diperlakukan sebagai satu tema video, bukan ${selectedProductCount} video terpisah.`;}
+}
+syncProductCountUI();
+
+document.querySelectorAll("[data-product-count]").forEach(b=>b.addEventListener("click",()=>{
+  selectedProductCount=Number(b.dataset.productCount);
+  syncProductCountUI();
+}));
+
+document.getElementById("resetPrompt").addEventListener("click").addEventListener("click",()=>{
   promptEl.value=originalPrompt;
   appliedPromptSeed=originalPrompt;
   finalPromptEl.value=originalPrompt;
@@ -101,47 +199,225 @@ document.getElementById("saveFinalPrompt").addEventListener("click",()=>{
   const n=document.getElementById("generationNote");
   n.style.display="block";
   n.textContent="Prompt Final saved for this Content Factory project.";
-}); document.querySelectorAll("[data-count]").forEach(b=>b.addEventListener("click",()=>{selectedVideoCount=Number(b.dataset.count);document.querySelectorAll("[data-count]").forEach(x=>x.classList.toggle("active",x===b));document.getElementById("generateStoryboard").textContent="BUAT "+selectedVideoCount+" JOB VIDEO";document.getElementById("planCountPill").textContent=selectedVideoCount+"-video queue";})); document.querySelectorAll("[data-model]").forEach(b=>b.addEventListener("click",()=>{selectedModel=b.dataset.model;document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x===b));})); document.querySelectorAll("[data-age]").forEach(b=>b.addEventListener("click",()=>{selectedAge=b.dataset.age;document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x===b));}));
+}); document.querySelectorAll("[data-count]").forEach(b=>b.addEventListener("click",()=>{selectedVideoCount=Number(b.dataset.count);document.querySelectorAll("[data-count]").forEach(x=>x.classList.toggle("active",x===b));document.getElementById("generateStoryboard").textContent="BUAT "+selectedVideoCount+" JOB VIDEO";document.getElementById("planCountPill").textContent=selectedVideoCount+"-video queue · "+selectedProductCount+" products";})); document.querySelectorAll("[data-model]").forEach(b=>b.addEventListener("click",()=>{selectedModel=b.dataset.model;document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x===b));})); document.querySelectorAll("[data-age]").forEach(b=>b.addEventListener("click",()=>{selectedAge=b.dataset.age;document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x===b));}));
 document.querySelectorAll("[data-speech]").forEach(b=>b.addEventListener("click",()=>{selectedSpeech=b.dataset.speech;document.querySelectorAll("[data-speech]").forEach(x=>x.classList.toggle("active",x===b));}));  document.querySelectorAll("[data-captions]").forEach(b=>b.addEventListener("click",()=>{selectedCaptions=b.dataset.captions;document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",x===b));const pill=document.getElementById("planCaptionPill");if(pill)pill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");})); document.querySelectorAll("[data-platform]").forEach(b=>b.addEventListener("click",()=>{selectedPlatform=b.dataset.platform;document.querySelectorAll("[data-platform]").forEach(x=>x.classList.toggle("active",x===b));}));
 function addScene(no,title,sec,visual,voice){const article=document.createElement("article");article.className="cf-scene";article.innerHTML='<div class="cf-scene-head"><strong>SCENE '+no+' · '+title+'</strong><span class="cf-muted">'+sec+'s</span></div><label class="cf-label">Visual direction</label><textarea class="cf-textarea scene-visual">'+visual+'</textarea><label class="cf-label">Voice-over</label><textarea class="cf-textarea scene-voice">'+voice+'</textarea><label class="cf-label">On-screen text</label><input class="cf-input scene-text" value="'+title+'">';scenes.appendChild(article);}
-function escapeJson(v){return JSON.stringify(v);} function buildPrompt(angle,index){const name=productName.value.trim()||"produk ini",aud=document.getElementById("audience").value.trim()||"target audiens",style=document.getElementById("style").value,model=selectedModel==="none"?"tanpa model manusia":(selectedModel==="female"?"model perempuan":"model laki-laki"),age=selectedAge,dur=Number(document.getElementById("duration").value),platformLabel=selectedPlatform==="shopee"?"Shopee":"TikTok Shop";const seed=appliedPromptSeed.trim();const speech=selectedSpeech==="speaking";const textMode=selectedCaptions==="yes"?(speech?"Gunakan ucapan singkat dalam Bahasa Indonesia yang natural dengan sinkronisasi bibir yang jelas. Tampilkan ucapan sebagai teks dinamis; saat model berbicara, frasa yang sedang diucapkan dapat diperbesar atau diberi penekanan, lalu kembali normal. Letakkan teks di area bawah yang aman dan jangan menutupi produk atau wajah.":"Gunakan teks dinamis singkat di layar untuk menyampaikan hook, manfaat produk, dan ajakan bertindak. Tidak ada voice-over atau dialog lisan."):"JANGAN menampilkan caption, subtitle, teks layar, label, atau tulisan dialog apa pun di dalam video.";return `Buat prompt VIDEO afiliasi ${platformLabel} yang siap diproduksi dalam format vertikal 9:16. Produk: ${name}. Target audiens: ${aud}. Arahan manusia: ${model}, usia ${age}. Gaya: ${style}. Angle: ${angle}. Target durasi: ${dur} detik. Mode bicara: ${speech?"BERBICARA DALAM BAHASA INDONESIA YANG JELAS DAN NATURAL":"TANPA BICARA"}. Teks dinamis: ${selectedCaptions==="yes"?"AKTIF":"NONAKTIF"}. ${textMode} Gunakan gerakan manusia yang realistis, penanganan produk yang natural, dan tampilan produk yang konsisten dengan referensi. Jangan gunakan sulap, fantasi, perubahan objek secara acak, gerakan yang tidak masuk akal, ucapan yang tidak jelas, atau klaim produk, spesifikasi, harga, diskon, dan sertifikasi yang tidak diberikan. Susun aksi agar realistis dan dapat selesai dalam durasi yang ditentukan. Akhiri dengan ajakan bertindak yang natural. ${seed}`;}function makeScenes(){const preferred=document.getElementById("angle").value;const baseAngles=["Problem → Solution","Product Demonstration","Review / Honest","Lifestyle / POV","Hard Selling / CTA"];const ordered=[preferred,...baseAngles.filter(a=>a!==preferred)];const angles=ordered.slice(0,selectedVideoCount);currentJobs=angles.map((angle,i)=>({jobId:"job-"+String(i+1).padStart(2,"0"),angle,prompt:buildPrompt(angle,i+1),status:"READY"}));scenes.innerHTML='<div class="cf-success"><strong>'+currentJobs.length+' VIDEO JOB'+(currentJobs.length===1?"":"S")+' READY.</strong><div class="cf-muted" style="margin-top:6px">Prompt produksi sudah disiapkan untuk ChatGPT → Google Flow. '+(isDiamond?"Prompt yang diterapkan digunakan dalam pekerjaan ini.":"Prompt Content Factory yang tersedia digunakan untuk pekerjaan ini.")+'</div></div>';document.getElementById("queueActions").style.display="block";document.getElementById("queueStatus").textContent=currentJobs.length+" VIDEO JOB"+(currentJobs.length===1?"":"S")+" READY · ANTREAN BELUM DIMULAI";document.getElementById("queueProgress").style.width="0%";}
-document.getElementById("generateStoryboard").addEventListener("click",()=>{makeScenes();if(currentJobs.length){promptEl.value=currentJobs[0].prompt;finalPromptEl.value=currentJobs[0].prompt;}const n=document.getElementById("generationNote");n.style.display="block";n.textContent="1 job video dibuat. Prompt Awal dan Prompt Final sekarang sama dan siap diunduh.";});
-function buildJobPayload(){return{version:2,createdAt:new Date().toISOString(),source:"DICIDY Content Factory",product:{name:productName.value,image:productImage.value,imageData:selectedImageDataUrl,imageFileName:selectedImageFileName,price:productHarga.value,commission:productKomisi.value,description:productDescription.value,link:productLink.value},brief:{platform:selectedPlatform,audience:document.getElementById("audience").value,model:selectedModel,age:selectedAge,style:document.getElementById("style").value,duration:Number(document.getElementById("duration").value),speech:selectedSpeech,captions:{required:selectedCaptions==="yes",style:selectedCaptions==="yes"?"dynamic-emphasis":"none"},videoCount:selectedVideoCount,angleMode:"standard affiliate angles"},jobs:currentJobs.map(j=>({...j,prompt:j.prompt,status:"READY"}))};} function getProject(){return{id:Date.now().toString(36),createdAt:new Date().toISOString(),product:{name:productName.value,image:productImage.value,imageData:selectedImageDataUrl,imageFileName:selectedImageFileName,price:productHarga.value,commission:productKomisi.value,description:productDescription.value,link:productLink.value},brief:{platform:selectedPlatform,audience:document.getElementById("audience").value,model:selectedModel,age:selectedAge,style:document.getElementById("style").value,duration:document.getElementById("duration").value,angle:document.getElementById("angle").value,promptSeed:promptEl.value,finalPrompt:finalPromptEl.value},scenes:[...document.querySelectorAll(".cf-scene")].map(s=>({visual:s.querySelector(".scene-visual").value,voice:s.querySelector(".scene-voice").value,text:s.querySelector(".scene-text").value}))};}
-function loadProjects(){try{return JSON.parse(localStorage.getItem(projectsKey)||"[]")}catch{return[]}}function saveProjects(items){localStorage.setItem(projectsKey,JSON.stringify(items.slice(0,30)))}function renderProjects(){const list=document.getElementById("projectList"),items=loadProjects();list.innerHTML="";if(!items.length){list.innerHTML='<div class="cf-empty" style="grid-column:1/-1">No saved projects yet.</div>';return;}items.forEach(item=>{const el=document.createElement("div");el.className="cf-project";el.innerHTML="<strong>"+(item.product?.name||"Untitled")+"</strong><div class='cf-muted'>"+new Date(item.createdAt).toLocaleString()+"</div><div class='cf-pill'>"+(item.brief?.platform==="shopee"?"Shopee":"TikTok Shop")+"</div><div class='cf-pill'>"+(item.brief?.duration||"—")+"s</div><div class='cf-project-actions'><button type='button' class='cf-project-action' data-project-action='load'>LOAD</button><button type='button' class='cf-project-action' data-project-action='delete'>DELETE</button></div>";el.querySelector('[data-project-action="load"]').addEventListener("click",()=>loadProject(item));el.querySelector('[data-project-action="delete"]').addEventListener("click",()=>{const next=loadProjects().filter(x=>x.id!==item.id);saveProjects(next);renderProjects();});list.appendChild(el);});}
-function loadProject(item){if(!item)return;const p=item.product||{},b=item.brief||{};productName.value=p.name||"Blender";productImage.value=p.image||"";productHarga.value=p.price||"Rp129.000";productKomisi.value=p.commission||"5.6%";productDescription.value=p.description||"Blender bagus murah berkualitas";productLink.value=p.link||"";selectedImageDataUrl=p.imageData||"";selectedImageFileName=p.imageFileName||"";document.getElementById("audience").value=b.audience||"Young woman";selectedPlatform=b.platform==="shopee"?"shopee":"tiktok";selectedModel=b.model||"female";selectedAge=b.age||"20-30";selectedSpeech=b.speech||"speaking";selectedCaptions=b.captions?.required===false?"no":"yes";document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",(x.dataset.captions===selectedCaptions)));const capPill=document.getElementById("planCaptionPill");if(capPill)capPill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");document.getElementById("style").value=b.style||"Natural / Casual";document.getElementById("duration").value=String(b.duration||10);document.getElementById("angle").value=b.angle||"Problem → Solution";promptEl.value=b.promptSeed||b.prompt||originalPrompt;appliedPromptSeed=b.finalPrompt||promptEl.value;finalPromptEl.value=appliedPromptSeed;document.querySelectorAll("[data-platform]").forEach(x=>x.classList.toggle("active",x.dataset.platform===selectedPlatform));document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x.dataset.model===selectedModel));document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x.dataset.age===selectedAge));document.querySelectorAll("[data-speech]").forEach(x=>x.classList.toggle("active",x.dataset.speech===selectedSpeech));syncPreview();document.querySelector('.cf-tab[data-tab="create"]').click();document.getElementById("generationNote").style.display="block";document.getElementById("generationNote").textContent="Project loaded: "+(p.name||"Untitled")+".";if(item.jobs?.length){currentJobs=item.jobs;}else{makeScenes();}}
-document.getElementById("downloadJob").addEventListener("click",()=>{const payload=buildJobPayload();const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="dicidy-flow-job-"+Date.now()+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});document.getElementById("runVideoFlow").addEventListener("click",async()=>{
-  const btn=document.getElementById("runVideoFlow");
-  const status=document.getElementById("runVideoStatus");
-  if(!currentJobs.length){status.textContent="Buat 1 job video terlebih dahulu.";return;}
+function escapeJson(v){return JSON.stringify(v);}
+function buildPrompt(angle,index){
+  const products=collectProducts();
+  const aud=document.getElementById("audience").value.trim()||"target audiens";
+  const style=document.getElementById("style").value;
+  const model=selectedModel==="none"?"tanpa model manusia":(selectedModel==="female"?"model perempuan":"model laki-laki");
+  const age=selectedAge;
+  const dur=Number(document.getElementById("duration").value);
+  const seed=appliedPromptSeed.trim();
+  const speech=selectedSpeech==="speaking";
+  const textMode=selectedCaptions==="yes"
+    ? (speech
+      ? "Gunakan voice-over Bahasa Indonesia yang sangat singkat dan cepat. Hook maksimal satu kalimat; jangan membaca seluruh daftar produk. Nama produk dapat diperkuat dengan teks dinamis."
+      : "Gunakan teks dinamis singkat untuk hook dan nama setiap produk. Tidak ada voice-over.")
+    : "JANGAN menampilkan caption, subtitle, teks layar, label, atau tulisan dialog apa pun di dalam video.";
+
+  const productFacts=products.map((p,i)=>`${i+1}. ${p.name} — ${p.description||"fakta produk belum diisi"}`).join("\n");
+  const count=products.length;
+  const pacing=count>=5
+    ? "sangat cepat: hook 1 detik, lalu rapid cuts sekitar 1 detik per produk, kemudian penutup singkat"
+    : count>=3
+      ? "cepat dan terstruktur: hook singkat, tiap produk mendapat momen visual yang jelas, lalu penutup singkat"
+      : "ringkas dengan fokus visual yang jelas pada setiap produk";
+
+  return `Buat prompt video afiliasi universal yang siap diproduksi dalam format vertikal 9:16. Video harus NETRAL dan dapat dipakai ulang di berbagai platform. JANGAN menyebut, menampilkan, meniru, atau memasukkan logo, ikon, watermark, nama aplikasi, antarmuka aplikasi, tombol, atau elemen branding platform distribusi apa pun.
+
+TEMA VIDEO: ${angle}.
+JUMLAH PRODUK: ${count}.
+TARGET AUDIENS: ${aud}.
+MODEL: ${model}, usia ${age}.
+GAYA: ${style}.
+TARGET DURASI: ${dur} detik.
+MODE BICARA: ${speech?"BERBICARA DALAM BAHASA INDONESIA, SANGAT RINGKAS":"TANPA BICARA"}.
+TEKS DINAMIS: ${selectedCaptions==="yes"?"AKTIF":"NONAKTIF"}.
+
+DAFTAR PRODUK YANG WAJIB MUNCUL:
+${productFacts}
+
+ATURAN KREATIF:
+- Perlakukan semua gambar produk yang diberikan sebagai bahan visual nyata dan gunakan setiap produk yang tersedia.
+- Jangan menggabungkan produk menjadi produk baru atau mengubah bentuk, warna, merek, detail, atau kemasan produk secara acak.
+- Untuk 3–6 produk, buat satu video roundup/listicle yang memiliki tema tunggal, bukan beberapa iklan terpisah.
+- Hook harus menyebut kebutuhan atau situasi pengguna, bukan nama platform.
+- Setiap produk harus mendapat momen visual yang dapat dikenali. Jangan biarkan satu produk tertutup oleh produk lain sepanjang video.
+- Pacing: ${pacing}.
+- Untuk format listicle, gunakan urutan produk 1 → ${count} secara jelas melalui framing, gerakan kamera, atau teks singkat.
+- Hindari klaim manfaat, harga, diskon, spesifikasi, sertifikasi, atau hasil yang tidak diberikan pada data produk.
+- Gunakan gerakan manusia realistis, interaksi produk natural, pencahayaan konsisten, dan transisi cepat tetapi masuk akal.
+- Penutup berupa CTA netral seperti ajakan melihat detail produk, tanpa menyebut platform tertentu.
+- ${textMode}
+
+Jangan membuat logo platform, watermark, badge aplikasi, screenshot aplikasi, atau UI platform.
+${seed}`;
+}
+function makeScenes(){
+  const preferred=document.getElementById("angle").value;
+  const baseAngles=["Barang wajib dimiliki","Checklist sebelum aktivitas","Starter kit / paket lengkap","POV persiapan sebelum aktivitas","Masalah → solusi"];
+  const ordered=[preferred,...baseAngles.filter(a=>a!==preferred)];
+  const angles=ordered.slice(0,selectedVideoCount);
+  currentJobs=angles.map((angle,i)=>({jobId:"job-"+String(i+1).padStart(2,"0"),angle,prompt:buildPrompt(angle,i+1),status:"READY"}));
+  scenes.innerHTML='<div class="cf-success"><strong>'+currentJobs.length+' VIDEO JOB'+(currentJobs.length===1?"":"S")+' READY.</strong><div class="cf-muted" style="margin-top:6px">Prompt produksi memakai '+selectedProductCount+' produk sebagai satu video roundup. '+(isDiamond?"Prompt yang diterapkan digunakan dalam pekerjaan ini.":"Prompt Content Factory yang tersedia digunakan dalam pekerjaan ini.")+'</div></div>';
+  document.getElementById("queueActions").style.display="block";
+  document.getElementById("queueStatus").textContent=currentJobs.length+" VIDEO JOB"+(currentJobs.length===1?"":"S")+" READY · ANTREAN BELUM DIMULAI";
+  document.getElementById("queueProgress").style.width="0%";
+}
+document.getElementById("generateStoryboard").addEventListener("click",()=>{
+  makeScenes();
+  if(currentJobs.length){promptEl.value=currentJobs[0].prompt;finalPromptEl.value=currentJobs[0].prompt;}
+  const n=document.getElementById("generationNote");n.style.display="block";n.textContent="Job video dibuat. Prompt Awal dan Prompt Final sudah disinkronkan.";
+});
+function buildJobPayload(){
+  const products=collectProducts();
+  return {
+    version:3,
+    createdAt:new Date().toISOString(),
+    source:"DICIDY Content Factory",
+    product:products[0]||{},
+    products,
+    brief:{
+      audience:document.getElementById("audience").value,
+      model:selectedModel,
+      age:selectedAge,
+      style:document.getElementById("style").value,
+      duration:Number(document.getElementById("duration").value),
+      speech:selectedSpeech,
+      captions:{required:selectedCaptions==="yes",style:selectedCaptions==="yes"?"dynamic-emphasis":"none"},
+      videoCount:selectedVideoCount,
+      productCount:selectedProductCount,
+      angleMode:"multi-product roundup"
+    },
+    jobs:currentJobs.map(j=>({...j,prompt:j.prompt,status:"READY"}))
+  };
+}
+function getProject(){
+  const products=collectProducts();
+  return {
+    id:Date.now().toString(36),
+    createdAt:new Date().toISOString(),
+    products,
+    product:products[0]||{},
+    brief:{
+      audience:document.getElementById("audience").value,
+      model:selectedModel,
+      age:selectedAge,
+      speech:selectedSpeech,
+      captions:{required:selectedCaptions==="yes"},
+      style:document.getElementById("style").value,
+      duration:document.getElementById("duration").value,
+      angle:document.getElementById("angle").value,
+      productCount:selectedProductCount,
+      promptSeed:promptEl.value,
+      finalPrompt:finalPromptEl.value
+    },
+    jobs:currentJobs
+  };
+}
+function loadProjects(){try{return JSON.parse(localStorage.getItem(projectsKey)||"[]")}catch{return[]}}
+function saveProjects(items){localStorage.setItem(projectsKey,JSON.stringify(items.slice(0,30)))}
+function renderProjects(){
+  const list=document.getElementById("projectList"),items=loadProjects();list.innerHTML="";
+  if(!items.length){list.innerHTML='<div class="cf-empty" style="grid-column:1/-1">No saved projects yet.</div>';return;}
+  items.forEach(item=>{
+    const count=item.brief?.productCount||item.products?.length||1;
+    const el=document.createElement("div");el.className="cf-project";
+    el.innerHTML="<strong>"+(item.product?.name||item.products?.[0]?.name||"Untitled")+"</strong><div class='cf-muted'>"+new Date(item.createdAt).toLocaleString()+"</div><div class='cf-pill'>"+count+" produk</div><div class='cf-pill'>"+(item.brief?.duration||"—")+"s</div><div class='cf-project-actions'><button type='button' class='cf-project-action' data-project-action='load'>LOAD</button><button type='button' class='cf-project-action' data-project-action='delete'>DELETE</button></div>";
+    el.querySelector('[data-project-action="load"]').addEventListener("click",()=>loadProject(item));
+    el.querySelector('[data-project-action="delete"]').addEventListener("click",()=>{const next=loadProjects().filter(x=>x.id!==item.id);saveProjects(next);renderProjects();});
+    list.appendChild(el);
+  });
+}
+function loadProject(item){
+  if(!item)return;
+  const products=Array.isArray(item.products)&&item.products.length?item.products:(item.product?[item.product]:[]);
+  selectedProductCount=Math.min(6,Math.max(1,Number(item.brief?.productCount||products.length||1)));
+  productStates=Array.from({length:6},(_,i)=>createProductState(i,products[i]||{}));
+  const b=item.brief||{};
+  document.getElementById("audience").value=b.audience||"Anak kos / pengguna muda";
+  selectedModel=b.model||"female";
+  selectedAge=b.age||"20-30";
+  selectedSpeech=b.speech||"speaking";
+  selectedCaptions=b.captions?.required===false?"no":"yes";
+  document.getElementById("style").value=b.style||"Fast-paced montage / Rapid cuts";
+  document.getElementById("duration").value=String(b.duration||10);
+  document.getElementById("angle").value=b.angle||"Barang wajib dimiliki";
+  promptEl.value=b.promptSeed||item.finalPrompt||originalPrompt;
+  appliedPromptSeed=b.finalPrompt||promptEl.value;
+  finalPromptEl.value=appliedPromptSeed;
+  document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x.dataset.model===selectedModel));
+  document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x.dataset.age===selectedAge));
+  document.querySelectorAll("[data-speech]").forEach(x=>x.classList.toggle("active",x.dataset.speech===selectedSpeech));
+  document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",x.dataset.captions===selectedCaptions));
+  const capPill=document.getElementById("planCaptionPill");if(capPill)capPill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");
+  syncProductCountUI();
+  syncPreview();
+  document.querySelector('.cf-tab[data-tab="create"]').click();
+  document.getElementById("generationNote").style.display="block";
+  document.getElementById("generationNote").textContent="Project loaded: "+(item.product?.name||products[0]?.name||"Untitled")+".";
+  if(item.jobs?.length){currentJobs=item.jobs;}else{makeScenes();}
+}
+document.getElementById("downloadJob").addEventListener("click",()=>{const payload=buildJobPayload();const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="dicidy-flow-job-"+Date.now()+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});async function sendBridgeRequest(type,payload={}){
+  const requestId=type+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
+  const resultPromise=new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>{window.removeEventListener("message",onResult);reject(new Error("Extension tidak memberikan respons. Pastikan DICIDY Flow Bridge aktif."));},12*60*1000);
+    function onResult(event){
+      if(event.source!==window)return;
+      const data=event.data;
+      if(!data||data.source!=="DICIDY_FLOW_BRIDGE"||data.type!=="DICIDY_BRIDGE_RESULT"||data.requestId!==requestId)return;
+      clearTimeout(timeout);window.removeEventListener("message",onResult);resolve(data.result);
+    }
+    window.addEventListener("message",onResult);
+  });
+  window.postMessage({source:"DICIDY_CONTENT_FACTORY",type,requestId,...payload},"*");
+  return await resultPromise;
+}
+async function copyProductToClipboard(product){
+  const source=product.imageData||product.image;
+  if(!source)throw new Error("Produk ${product.index} belum memiliki gambar.");
+  if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("Browser tidak mendukung image clipboard.");
+  const response=await fetch(source);
+  if(!response.ok)throw new Error("Gagal membaca gambar produk ${product.index}.");
+  const blob=await response.blob();
+  const type=blob.type&&blob.type.startsWith("image/")?blob.type:"image/png";
+  const clipboardBlob=type==="image/png"?blob:await convertImageBlobToPng(blob);
+  await navigator.clipboard.write([new ClipboardItem({"image/png":clipboardBlob})]);
+}
+document.getElementById("runVideoFlow").addEventListener("click",async()=>{
+  const btn=document.getElementById("runVideoFlow"),status=document.getElementById("runVideoStatus");
+  if(!currentJobs.length){status.textContent="Buat job video terlebih dahulu.";return;}
+  const products=collectProducts();
+  const missing=products.filter(p=>!p.imageData&&!p.image);
+  if(missing.length){status.textContent="ERROR: semua produk yang dipilih wajib memiliki gambar.";return;}
   btn.disabled=true;
-  status.textContent="Menyiapkan gambar produk dan menjalankan ChatGPT → Flow...";
   try{
-    await copyImageToClipboard();
+    status.textContent="1/3 ChatGPT menyusun prompt produksi...";
     const payload=buildJobPayload();
     payload.product.imageData="";
-    const requestId="run-"+Date.now().toString(36);
-    const resultPromise=new Promise((resolve,reject)=>{
-      const timeout=setTimeout(()=>{window.removeEventListener("message",onResult);reject(new Error("Extension tidak memberikan respons. Pastikan DICIDY Flow Bridge aktif."));},12*60*1000);
-      function onResult(event){
-        if(event.source!==window) return;
-        const data=event.data;
-        if(!data||data.source!=="DICIDY_FLOW_BRIDGE"||data.type!=="DICIDY_RUN_VIDEO_RESULT"||data.requestId!==requestId)return;
-        clearTimeout(timeout);
-        window.removeEventListener("message",onResult);
-        resolve(data.result);
-      }
-      window.addEventListener("message",onResult);
-    });
-    window.postMessage({source:"DICIDY_CONTENT_FACTORY",type:"DICIDY_RUN_VIDEO",requestId,job:payload},"*");
-    const result=await resultPromise;
-    if(!result?.ok) throw new Error(result?.error||"Video gagal diproses.");
+    payload.products=products.map(p=>({...p,imageData:""}));
+    const promptResult=await sendBridgeRequest("DICIDY_RUN_VIDEO",{job:payload});
+    if(!promptResult?.ok)throw new Error(promptResult?.error||"Prompt gagal dipindahkan ke Flow.");
+
+    status.textContent="2/3 Memasang "+products.length+" produk ke Ingredients...";
+    for(let i=0;i<products.length;i++){
+      await copyProductToClipboard(products[i]);
+      const imageResult=await sendBridgeRequest("DICIDY_PASTE_ONE_IMAGE",{});
+      if(!imageResult?.ok)throw new Error("Produk "+(i+1)+" gagal masuk Ingredients: "+(imageResult?.error||"unknown error"));
+      status.textContent="2/3 Ingredients: "+(i+1)+"/"+products.length+" produk masuk.";
+    }
+
+    status.textContent="3/3 Generate video...";
+    const generation=await sendBridgeRequest("DICIDY_GENERATE_FLOW",{});
+    if(!generation?.ok)throw new Error(generation?.error||"Generate Flow gagal.");
     status.textContent="SELESAI: video sudah di-generate di Google Flow. Tidak ada download otomatis.";
   }catch(e){
     console.error(e);
     status.textContent="ERROR: "+(e?.message||"Gagal menjalankan video.");
-  }finally{
-    btn.disabled=false;
-  }
+  }finally{btn.disabled=false;}
 });
 document.getElementById("saveProject").addEventListener("click",()=>{if(!currentJobs.length)makeScenes();const items=loadProjects();items.unshift(getProject());saveProjects(items);renderProjects();const n=document.getElementById("generationNote");n.style.display="block";n.textContent="Content project saved in this browser for the MVP.";});
 const modal=document.getElementById("connectModal");const closeConnect=()=>modal.classList.remove("open");document.getElementById("closeConnect").addEventListener("click",closeConnect);document.querySelectorAll("[data-connect]").forEach(btn=>btn.addEventListener("click",()=>{const type=btn.dataset.connect;document.getElementById("connectTitle").textContent=type==="openai"?"Connect OpenAI API":"Connect Google Veo API";document.getElementById("connectBody").textContent=type==="openai"?"Use your own OpenAI API key. DICIDY will use it only for authenticated Content Factory requests once the secure backend is deployed.":"Use your own Google Cloud/Gemini API billing connection for Veo. Google Flow subscription credits are not the same as Veo API billing.";modal.classList.add("open");}));
