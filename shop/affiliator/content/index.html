@@ -194,7 +194,7 @@ document.querySelectorAll("[data-product-count]").forEach(b=>b.addEventListener(
   syncProductCountUI();
 }));
 
-document.getElementById("resetPrompt").addEventListener("click").addEventListener("click",()=>{
+document.getElementById("resetPrompt").addEventListener("click",()=>{
   promptEl.value=originalPrompt;
   appliedPromptSeed=originalPrompt;
   finalPromptEl.value=originalPrompt;
