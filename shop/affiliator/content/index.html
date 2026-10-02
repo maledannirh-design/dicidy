@@ -355,7 +355,6 @@ function loadProject(item){
   document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",x.dataset.captions===selectedCaptions));
   const capPill=document.getElementById("planCaptionPill");if(capPill)capPill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");
   syncProductCountUI();
-  syncPreview();
   document.querySelector('.cf-tab[data-tab="create"]').click();
   document.getElementById("generationNote").style.display="block";
   document.getElementById("generationNote").textContent="Project loaded: "+(item.product?.name||products[0]?.name||"Untitled")+".";
