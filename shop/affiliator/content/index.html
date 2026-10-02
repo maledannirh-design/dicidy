@@ -401,6 +401,11 @@ document.getElementById("runVideoFlow").addEventListener("click",async()=>{
     const promptResult=await sendBridgeRequest("DICIDY_RUN_VIDEO",{job:payload});
     if(!promptResult?.ok)throw new Error(promptResult?.error||"Prompt gagal dipindahkan ke Flow.");
 
+    if(products.length===1){
+      status.textContent="SELESAI: video sudah di-generate di Google Flow. Tidak ada download otomatis.";
+      return;
+    }
+
     status.textContent="2/3 Memasang "+products.length+" produk ke Ingredients...";
     for(let i=0;i<products.length;i++){
       await copyProductToClipboard(products[i]);
