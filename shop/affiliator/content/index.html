@@ -36,7 +36,7 @@
 </div>
 
 <div id="creativeBriefWorkspace"><div class="cf-card" style="margin-top:18px"><div class="kicker">02 / BRIEF KREATIF</div><div class="cf-grid"><div>
-<div class="cf-setting-box" style="margin-top:0"><div class="cf-label" style="margin-top:0">Format distribusi</div><div class="cf-required">1 VIDEO · 9:16 · NETRAL UNTUK BERBAGAI PLATFORM</div><div class="cf-muted" style="margin-top:8px">Tidak ada nama platform, logo platform, watermark, atau tampilan aplikasi tertentu di dalam prompt maupun video.</div></div><label class="cf-label">Target audiens</label><input class="cf-input" id="audience" value="Anak kos / pengguna muda"><label class="cf-label">Jumlah video</label><div class="cf-count-grid" id="videoCountChoices"><button type="button" class="cf-count active" data-count="1">1</button><button type="button" class="cf-count" data-count="2">2</button><button type="button" class="cf-count" data-count="3">3</button><button type="button" class="cf-count" data-count="4">4</button><button type="button" class="cf-count" data-count="5">5</button></div><div class="cf-muted" style="margin-top:7px">Setiap video adalah satu pekerjaan kreatif. Satu video dapat berisi beberapa klip 4–8 detik.</div><label class="cf-label">Model</label><div class="cf-choice-grid" id="modelChoices"><button type="button" class="cf-choice active" data-model="female">Female</button><button type="button" class="cf-choice" data-model="male">Male</button><button type="button" class="cf-choice" data-model="none">Tanpa model</button></div><label class="cf-label">Age</label><div class="cf-choice-grid" id="ageChoices"><button type="button" class="cf-choice active" data-age="20-30">20–30</button><button type="button" class="cf-choice" data-age="30-50">30–50</button><button type="button" class="cf-choice" data-age="50+">50+</button></div>
+<div class="cf-setting-box" style="margin-top:0"><div class="cf-label" style="margin-top:0">Format distribusi</div><div class="cf-required">1 VIDEO · 9:16 · NETRAL UNTUK BERBAGAI PLATFORM</div><div class="cf-muted" style="margin-top:8px">Tidak ada nama platform, logo platform, watermark, atau tampilan aplikasi tertentu di dalam prompt maupun video.</div></div><label class="cf-label">Target audiens</label><input class="cf-input" id="audience" value="Anak kos / pengguna muda"><label class="cf-label">Jumlah video</label><div class="cf-count-grid" id="videoCountChoices"><button type="button" class="cf-count active" data-count="1">1</button><button type="button" class="cf-count" data-count="2">2</button><button type="button" class="cf-count" data-count="3">3</button><button type="button" class="cf-count" data-count="4">4</button><button type="button" class="cf-count" data-count="5">5</button></div><div class="cf-muted" style="margin-top:7px">Setiap video adalah satu pekerjaan kreatif. Satu video dapat berisi beberapa klip 4–8 detik.</div><label class="cf-label">Model</label><div class="cf-choice-grid" id="modelChoices"><button type="button" class="cf-choice active" data-model="female">Female</button><button type="button" class="cf-choice" data-model="male">Male</button><button type="button" class="cf-choice" data-model="none">Tanpa talent</button></div><div class="cf-talent-picker" id="talentPicker"><div class="cf-label" style="margin-top:0">Pilih talent</div><div class="cf-talent-choices" id="talentChoices"></div></div><label class="cf-label">Age</label><div class="cf-choice-grid" id="ageChoices"><button type="button" class="cf-choice active" data-age="20-30">20–30</button><button type="button" class="cf-choice" data-age="30-50">30–50</button><button type="button" class="cf-choice" data-age="50+">50+</button></div>
 <div class="cf-setting-box"><div class="cf-label" style="margin-top:0">Suara / Bicara</div><div class="cf-setting-row" id="speechChoices"><button type="button" class="cf-setting-choice active" data-speech="speaking">Berbicara · Bahasa Indonesia</button><button type="button" class="cf-setting-choice" data-speech="silent">Tanpa bicara</button></div><div class="cf-label">Gunakan teks dinamis?</div><div class="cf-setting-row" id="captionChoices"><button type="button" class="cf-setting-choice active" data-captions="yes">Ya, gunakan teks dinamis</button><button type="button" class="cf-setting-choice" data-captions="no">Tidak, tanpa teks dinamis</button></div><div class="cf-muted" style="margin-top:8px">Pilih apakah Flow perlu membuat teks dinamis di dalam video.</div></div><label class="cf-label">Gaya konten</label><select class="cf-select" id="style">
 <option>Fast-paced montage / Rapid cuts</option>
 <option>Checklist editorial</option>
@@ -140,10 +140,20 @@ tabs.forEach(tab=>tab.addEventListener("click",()=>{
   if(tab.dataset.tab==="projects")renderProjects();
   if(tab.dataset.tab==="market")renderMarketProducts();
 }));
-let selectedModel="female",selectedAge="20-30",selectedSpeech="speaking",selectedCaptions="yes",selectedVideoCount=1,selectedProductCount=1,isDiamond=false,currentJobs=[],productStates=[],appliedPromptSeed="";let marketRows=[],marketSource="shopee",personalProductStatesSnapshot=null,personalProductCountSnapshot=1;
+let selectedModel="female",selectedTalent="random",selectedAge="20-30",selectedSpeech="speaking",selectedCaptions="yes",selectedVideoCount=1,selectedProductCount=1,isDiamond=false,currentJobs=[],productStates=[],appliedPromptSeed="";let marketRows=[],marketSource="shopee",personalProductStatesSnapshot=null,personalProductCountSnapshot=1,currentContentType="personal";
 const productSlots=document.getElementById("productSlots"),scenes=document.getElementById("scenes"),promptEl=document.getElementById("prompt"),originalPrompt=promptEl.value,projectsKey="dicidyContentProjects",finalPromptEl=document.getElementById("finalPrompt");
 appliedPromptSeed=originalPrompt; finalPromptEl.value=originalPrompt;
 
+const TALENTS={female:{random:{code:"random",label:"Random Female",description:"Model perempuan acak",image:""},fixed:{code:"DICIDY_FEMALE01",label:"DICIDY_FEMALE01",description:"Talent perempuan tetap",image:""}},male:{random:{code:"random",label:"Random Male",description:"Model laki-laki acak",image:""},fixed:{code:"DICIDY_MALE01",label:"DICIDY_MALE01",description:"Talent laki-laki tetap",image:""}}};
+function renderTalentChoices(){
+  const host=document.getElementById("talentChoices"),picker=document.getElementById("talentPicker");
+  if(!host||!picker)return;
+  if(selectedModel==="none"){picker.style.display="none";return;}
+  picker.style.display="block";
+  const group=TALENTS[selectedModel];
+  host.innerHTML=Object.values(group).map(t=>'<button type="button" class="cf-talent-card '+(selectedTalent===t.code?"active":"")+'" data-talent="'+t.code+'">'+(t.image?'<img src="'+t.image+'" alt="'+t.label+'">':'<div style="height:70px;display:grid;place-items:center;border:1px dashed #444;margin-bottom:7px;color:#888">RANDOM</div>')+'<strong>'+t.label+'</strong><span>'+t.description+'</span></button>').join("");
+  host.querySelectorAll("[data-talent]").forEach(btn=>btn.addEventListener("click",()=>{selectedTalent=btn.dataset.talent;renderTalentChoices();}));
+}
 function createProductState(i,data={}) {
   return {
     name:data.name||"",
@@ -294,7 +304,7 @@ document.getElementById("saveFinalPrompt").addEventListener("click",()=>{
   const n=document.getElementById("generationNote");
   n.style.display="block";
   n.textContent="Prompt Final saved for this Content Factory project.";
-}); document.querySelectorAll("[data-count]").forEach(b=>b.addEventListener("click",()=>{selectedVideoCount=Number(b.dataset.count);document.querySelectorAll("[data-count]").forEach(x=>x.classList.toggle("active",x===b));document.getElementById("generateStoryboard").textContent="BUAT "+selectedVideoCount+" JOB VIDEO";document.getElementById("planCountPill").textContent=selectedVideoCount+"-video queue · "+selectedProductCount+" products";})); document.querySelectorAll("[data-model]").forEach(b=>b.addEventListener("click",()=>{selectedModel=b.dataset.model;document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x===b));})); document.querySelectorAll("[data-age]").forEach(b=>b.addEventListener("click",()=>{selectedAge=b.dataset.age;document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x===b));}));
+}); document.querySelectorAll("[data-count]").forEach(b=>b.addEventListener("click",()=>{selectedVideoCount=Number(b.dataset.count);document.querySelectorAll("[data-count]").forEach(x=>x.classList.toggle("active",x===b));document.getElementById("generateStoryboard").textContent="BUAT "+selectedVideoCount+" JOB VIDEO";document.getElementById("planCountPill").textContent=selectedVideoCount+"-video queue · "+selectedProductCount+" products";})); document.querySelectorAll("[data-model]").forEach(b=>b.addEventListener("click",()=>{selectedModel=b.dataset.model;selectedTalent="random";document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x===b));renderTalentChoices();})); document.querySelectorAll("[data-age]").forEach(b=>b.addEventListener("click",()=>{selectedAge=b.dataset.age;document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x===b));}));
 document.querySelectorAll("[data-speech]").forEach(b=>b.addEventListener("click",()=>{selectedSpeech=b.dataset.speech;document.querySelectorAll("[data-speech]").forEach(x=>x.classList.toggle("active",x===b));}));  document.querySelectorAll("[data-captions]").forEach(b=>b.addEventListener("click",()=>{selectedCaptions=b.dataset.captions;document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",x===b));const pill=document.getElementById("planCaptionPill");if(pill)pill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");})); 
 function addScene(no,title,sec,visual,voice){const article=document.createElement("article");article.className="cf-scene";article.innerHTML='<div class="cf-scene-head"><strong>SCENE '+no+' · '+title+'</strong><span class="cf-muted">'+sec+'s</span></div><label class="cf-label">Visual direction</label><textarea class="cf-textarea scene-visual">'+visual+'</textarea><label class="cf-label">Voice-over</label><textarea class="cf-textarea scene-voice">'+voice+'</textarea><label class="cf-label">On-screen text</label><input class="cf-input scene-text" value="'+title+'">';scenes.appendChild(article);}
 const marketDbName="dicidyMarketProductDB",marketStoreName="products";
@@ -481,7 +491,7 @@ function buildPrompt(angle,index){
   const products=collectProducts();
   const aud=document.getElementById("audience").value.trim()||"target audiens";
   const style=document.getElementById("style").value;
-  const model=selectedModel==="none"?"tanpa model manusia":(selectedModel==="female"?"model perempuan":"model laki-laki");
+  const model=selectedModel==="none"?"tanpa talent":(selectedModel==="female"?(selectedTalent==="random"?"model perempuan":"model perempuan tetap @"+selectedTalent):(selectedTalent==="random"?"model laki-laki":"model laki-laki tetap @"+selectedTalent));
   const age=selectedAge;
   const dur=Number(document.getElementById("duration").value);
   const seed=appliedPromptSeed.trim();
@@ -572,6 +582,7 @@ function buildJobPayload(){
 function getProject(){
   const products=collectProducts();
   return {
+    contentType:currentContentType,
     id:Date.now().toString(36),
     createdAt:new Date().toISOString(),
     products,
@@ -586,6 +597,8 @@ function getProject(){
       duration:document.getElementById("duration").value,
       angle:document.getElementById("angle").value,
       productCount:selectedProductCount,
+      talent:selectedTalent,
+      contentType:currentContentType,
       promptSeed:promptEl.value,
       finalPrompt:finalPromptEl.value
     },
@@ -600,7 +613,7 @@ function renderProjects(){
   items.forEach(item=>{
     const count=item.brief?.productCount||item.products?.length||1;
     const el=document.createElement("div");el.className="cf-project";
-    el.innerHTML="<strong>"+(item.product?.name||item.products?.[0]?.name||"Untitled")+"</strong><div class='cf-muted'>"+new Date(item.createdAt).toLocaleString()+"</div><div class='cf-pill'>"+count+" produk</div><div class='cf-pill'>"+(item.brief?.duration||"—")+"s</div><div class='cf-project-actions'><button type='button' class='cf-project-action' data-project-action='load'>LOAD</button><button type='button' class='cf-project-action' data-project-action='delete'>DELETE</button></div>";
+    el.innerHTML="<strong>"+(item.product?.name||item.products?.[0]?.name||"Untitled")+"</strong><div class=\"cf-project-type "+(item.contentType==="market"?"market":"personal")+"\">"+(item.contentType==="market"?"MARKET":"PRIBADI")+"</div><div class='cf-muted'>"+new Date(item.createdAt).toLocaleString()+"</div><div class='cf-pill'>"+count+" produk</div><div class='cf-pill'>"+(item.brief?.duration||"—")+"s</div><div class='cf-project-actions'><button type='button' class='cf-project-action' data-project-action='load'>LOAD</button><button type='button' class='cf-project-action' data-project-action='delete'>DELETE</button></div>";
     el.querySelector('[data-project-action="load"]').addEventListener("click",()=>loadProject(item));
     el.querySelector('[data-project-action="delete"]').addEventListener("click",()=>{const next=loadProjects().filter(x=>x.id!==item.id);saveProjects(next);renderProjects();});
     list.appendChild(el);
@@ -612,6 +625,8 @@ function loadProject(item){
   selectedProductCount=Math.min(6,Math.max(1,Number(item.brief?.productCount||products.length||1)));
   productStates=Array.from({length:6},(_,i)=>createProductState(i,products[i]||{}));
   const b=item.brief||{};
+  currentContentType=item.contentType||b.contentType||"personal";
+  selectedTalent=b.talent||"random";
   document.getElementById("audience").value=b.audience||"Anak kos / pengguna muda";
   selectedModel=b.model||"female";
   selectedAge=b.age||"20-30";
@@ -623,13 +638,13 @@ function loadProject(item){
   promptEl.value=b.promptSeed||item.finalPrompt||originalPrompt;
   appliedPromptSeed=b.finalPrompt||promptEl.value;
   finalPromptEl.value=appliedPromptSeed;
-  document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x.dataset.model===selectedModel));
+  document.querySelectorAll("[data-model]").forEach(x=>x.classList.toggle("active",x.dataset.model===selectedModel)); renderTalentChoices();
   document.querySelectorAll("[data-age]").forEach(x=>x.classList.toggle("active",x.dataset.age===selectedAge));
   document.querySelectorAll("[data-speech]").forEach(x=>x.classList.toggle("active",x.dataset.speech===selectedSpeech));
   document.querySelectorAll("[data-captions]").forEach(x=>x.classList.toggle("active",x.dataset.captions===selectedCaptions));
   const capPill=document.getElementById("planCaptionPill");if(capPill)capPill.textContent="Teks dinamis: "+(selectedCaptions==="yes"?"Ya":"Tidak");
   syncProductCountUI();
-  document.querySelector('.cf-tab[data-tab="create"]').click();
+  document.querySelector('.cf-tab[data-tab="'+(currentContentType==="market"?"market":"create")+'"]').click();
   document.getElementById("generationNote").style.display="block";
   document.getElementById("generationNote").textContent="Project loaded: "+(item.product?.name||products[0]?.name||"Untitled")+".";
   if(item.jobs?.length){currentJobs=item.jobs;}else{makeScenes();}
@@ -697,7 +712,7 @@ document.getElementById("runVideoFlow").addEventListener("click",async()=>{
     status.textContent="ERROR: "+(e?.message||"Gagal menjalankan video.");
   }finally{btn.disabled=false;}
 });
-document.getElementById("saveProject").addEventListener("click",()=>{if(!currentJobs.length)makeScenes();const items=loadProjects();items.unshift(getProject());saveProjects(items);renderProjects();const n=document.getElementById("generationNote");n.style.display="block";n.textContent="Content project saved in this browser for the MVP.";});
+document.getElementById("saveProject").addEventListener("click",()=>{currentContentType=document.getElementById("tab-market")?.classList.contains("active")?"market":"personal";if(!currentJobs.length)makeScenes();const items=loadProjects();items.unshift(getProject());saveProjects(items);renderProjects();const n=document.getElementById("generationNote");n.style.display="block";n.textContent="Content project saved in this browser for the MVP.";});
 const modal=document.getElementById("connectModal");const closeConnect=()=>modal.classList.remove("open");document.getElementById("closeConnect").addEventListener("click",closeConnect);document.querySelectorAll("[data-connect]").forEach(btn=>btn.addEventListener("click",()=>{const type=btn.dataset.connect;document.getElementById("connectTitle").textContent=type==="openai"?"Connect OpenAI API":"Connect Google Veo API";document.getElementById("connectBody").textContent=type==="openai"?"Use your own OpenAI API key. DICIDY will use it only for authenticated Content Factory requests once the secure backend is deployed.":"Use your own Google Cloud/Gemini API billing connection for Veo. Google Flow subscription credits are not the same as Veo API billing.";modal.classList.add("open");}));
 document.getElementById("marketSource")?.addEventListener("change",e=>{
   marketSource=e.target.value;
