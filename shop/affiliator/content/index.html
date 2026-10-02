@@ -375,7 +375,7 @@ function renderMarketProducts(){
     if(row._imageData)html+='<img class="cf-market-image" src="'+row._imageData+'" alt="">';
     else html+='<div class="cf-market-image-empty">UPLOAD<br>IMAGE</div>';
     html+='<input type="file" accept="image/*" class="market-image-file" data-index="'+i+'" id="marketImageFile'+i+'" style="display:none">';
-    html+='<button type="button" class="cf-project-action cf-market-upload" data-market-upload="'+i+'">UPLOAD IMAGE</button>';
+    html+='<div class="cf-market-actions" style="margin-top:6px"><button type="button" class="cf-project-action cf-market-upload" data-market-upload="'+i+'">UPLOAD IMAGE</button><button type="button" class="cf-project-action" data-market-copy="'+i+'" '+(row._imageData?"":"disabled")+'>COPY IMAGE</button></div>';
     if(row._imageFileName)html+='<div class="cf-muted" style="margin-top:5px">'+escapeHtml(row._imageFileName)+'</div>';
     html+='</td>';
     html+='<td><div class="cf-market-actions"><button type="button" class="cf-project-action" data-market-select="'+i+'">'+(row._selected?"DIPILIH":"PILIH")+'</button></div></td>';
@@ -384,11 +384,47 @@ function renderMarketProducts(){
   });
   html+='</tbody></table>';host.innerHTML=html;
   host.querySelectorAll("[data-market-upload]").forEach(btn=>btn.addEventListener("click",()=>document.getElementById("marketImageFile"+btn.dataset.marketUpload)?.click()));
+  host.querySelectorAll("[data-market-copy]").forEach(btn=>btn.addEventListener("click",()=>copyMarketImage(Number(btn.dataset.marketCopy),btn)));
   host.querySelectorAll(".market-image-file").forEach(input=>input.addEventListener("change",()=>handleMarketImage(Number(input.dataset.index),input.files?.[0])));
   host.querySelectorAll("[data-market-select]").forEach(btn=>btn.addEventListener("click",()=>toggleMarketSelection(Number(btn.dataset.marketSelect))));
 }
 function escapeHtml(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function escapeAttr(v){return escapeHtml(v).replace(/'/g,"&#39;");}
+async function copyMarketImage(i,button){
+  const row=marketRows[i];
+  if(!row?._imageData){
+    if(button)button.textContent="NO IMAGE";
+    return;
+  }
+  try{
+    if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("Browser tidak mendukung image clipboard.");
+    const response=await fetch(row._imageData);
+    if(!response.ok)throw new Error("Gagal membaca gambar produk.");
+    const blob=await response.blob();
+    const type=blob.type&&blob.type.startsWith("image/")?blob.type:"image/png";
+    const clipboardBlob=type==="image/png"?blob:await convertImageBlobToPng(blob);
+    await navigator.clipboard.write([new ClipboardItem({"image/png":clipboardBlob})]);
+    if(button){
+      const original=button.textContent;
+      button.textContent="COPIED ✓";
+      setTimeout(()=>{button.textContent=original;},1400);
+    }
+  }catch(error){
+    console.error(error);
+    if(button)button.textContent="COPY ERROR";
+  }
+}
+async function convertImageBlobToPng(blob){
+  const bitmap=await createImageBitmap(blob);
+  const canvas=document.createElement("canvas");
+  canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const ctx=canvas.getContext("2d");
+  ctx.drawImage(bitmap,0,0);
+  bitmap.close();
+  return await new Promise((resolve,reject)=>{
+    canvas.toBlob(result=>result?resolve(result):reject(new Error("Gagal mengonversi gambar ke PNG.")),"image/png");
+  });
+}
 function handleMarketImage(i,file){
   if(!file)return;
   if(!file.type.startsWith("image/"))return;
